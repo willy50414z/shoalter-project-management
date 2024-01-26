@@ -4,24 +4,41 @@ from jira import JIRA
 jiraOptions = {'server': "https://hongkongtv.atlassian.net/"}
 
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", "ATATT3xFfGF05kD5KkxhYRyEAETdNRYmG9UpcdkALmSEuLYoWYaRw000WZaoP_lFy2l_8c-vARVbQ4KxqYARMtfV-s8l9qGx6ScxG2sGqeMYYiO7_jZde82fPraavg4Mbo7cv3wKx9RgsIM_7z2hWilJ41_mAoW5ftBq146hRcMDFkcVWQszZhw=48851EAB"))
+	"willy.cheng@shoalter.com", "ATATT3xFfGF0tVciIsw0Jf1Y9rz6GXVKI1pJz1gURCCl0TyT2VzP8f7ftNPhnNASZBiraoxqdEs1JFdyUhiM1JlX9zB-mtW-268SUWiWCTifgSYS3y0Bc2k_LV9dHfeCqeTju77Ni5Y59B--Su7yiBnImLPPTcsrHx6_xWVN8ypO5BoF-g78RB8=1DA8FB69"))
 
 def getIncompletedTask():
-    #assemble filter
-    assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang', 'TW - IT - BE - JOHN CHANG','TW - IT - BE - Luke Chen']
+    # assemble filter
+    assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
+                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen']
     assignee_query = ', '.join([f'"{assignee}"' for assignee in assignees])
-    
-    devPICs = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang', 'TW - IT - BE - JOHN CHANG','TW - IT - BE - Luke Chen']
+
+    devPICs = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
+               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen']
     devPIC_query = ', '.join([f'"{devPIC}"' for devPIC in devPICs])
 
-    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
+    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed', "In Testing"]
     status_query = ', '.join([f'"{status}"' for status in statuses])
 
-    jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND status not in ({status_query})'
-    
-    #fetch data
-    issues = jira.search_issues(jql_str=jql_query)
-    return issues
+    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement']
+    issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
+
+    jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query})) OR issuetype in ("Sub-task"))'
+
+    # jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query}))'
+
+    # fetch data
+    startIdx = 0
+    fetch_size = 100
+
+    issues = jira.search_issues(jql_str=jql_query, maxResults=fetch_size)
+    totalSize = issues.total
+    allIssues = issues.iterable
+    startIdx += fetch_size
+    while startIdx < totalSize:
+        issues = jira.search_issues(jql_str=jql_query, startAt=startIdx, maxResults=min(fetch_size, totalSize - startIdx))
+        allIssues.extend(issues.iterable)
+        startIdx += fetch_size
+    return allIssues
 
 #get single ticket
 #singleIssue = jira.issue('SI-18')

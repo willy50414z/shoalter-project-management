@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 
 from dto.NotionTaskDto import NotionTaskDto
 
-task_database_id = 'e79515c7c75b490fb38147dbf5a645b8'  # Replace with your database ID
+task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
+subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
 release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
 integration_token = 'secret_1gyebl9EyV1eMpsIU2wSsUJMSiw4LqGHNJqqan4Qvvj'  # Replace with your integration token
+
+jira_url_prefix = "https://hongkongtv.atlassian.net/browse/"
 
 peopleIdMap = {
     'TW - IT - BE - JOHN CHANG': '744b3b5b-ca64-4a33-a074-e948f1619b25'
@@ -21,6 +24,7 @@ headers = {
     'Notion-Version': '2022-06-28'  # Specify the Notion API version
 }
 
+
 def findAllReleases():
     url = f'https://api.notion.com/v1/databases/{release_database_id}/query'
     payload = {"page_size": 100}
@@ -30,6 +34,7 @@ def findAllReleases():
         return data["results"]
     else:
         raise ValueError("[findAllReleases] fetch notion data by issue key failed")
+
 
 def findByReleaseDate(releaseDate):
     url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
@@ -49,6 +54,7 @@ def findByReleaseDate(releaseDate):
     else:
         raise ValueError("[findByTicketLike] fetch notion data by issue key failed, releaseDate[" + releaseDate + "]")
 
+
 def findByTicketLike(issueKey):
     url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
     payload = {"page_size": 100, "filter": {
@@ -64,6 +70,23 @@ def findByTicketLike(issueKey):
     else:
         raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
 
+
+def findByTicket(database_id, issueKey):
+    url = f'https://api.notion.com/v1/databases/{database_id}/query'
+    payload = {"page_size": 100, "filter": {
+        "property": "Ticket",
+        "rich_text": {
+            "equals": issueKey
+        }
+    }}
+    response = requests.post(url, json=payload, headers=headers)
+    data = response.json()
+    if "results" in data:
+        return data["results"]
+    else:
+        raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
+
+
 def deleteOutOfDateTask():
     url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
     three_months_ago = datetime.now() - timedelta(days=90)
@@ -71,8 +94,8 @@ def deleteOutOfDateTask():
     payload = {"page_size": 100, "filter": {
         "property": "Last edited time",
         "date": {"before": three_months_ago.isoformat()}
-        }
     }
+               }
 
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
@@ -105,11 +128,11 @@ def createPage(subTaskKey, title, taskKey, assigneeName):
             },
             "Ticket": {
                 'type': 'url',
-                'url': f'https://hongkongtv.atlassian.net/browse/{subTaskKey}'
+                'url': f'{jira_url_prefix}{subTaskKey}'
             },
             "ParentTicket": {
                 'type': 'url',
-                'url': f'https://hongkongtv.atlassian.net/browse/{taskKey}'
+                'url': f'{jira_url_prefix}{taskKey}'
             },
             'Assignee': {
                 'type': 'people',
@@ -119,24 +142,111 @@ def createPage(subTaskKey, title, taskKey, assigneeName):
     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
     print(response.json())
 
-def update(database_id, payload):
-    url = f'https://api.notion.com/v1/databases/{release_database_id}'
+
+def createTask(issue):
+    print(f'start create task, issue.key[{issue.key}]')
+    payload = {
+        "parent": {"type": "database_id", "database_id": task_database_id},
+        "properties": {
+            "Name": {
+                "type": "title",
+                "title": [{"type": "text", "text": {"content": f"[{issue.key}] {issue.fields.summary}"}}]
+            },
+            "Ticket": {
+                'type': 'url',
+                'url': jira_url_prefix + issue.key
+            },
+            'Assignee': {
+                'type': 'people',
+                'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+            },
+            "JiraStatus": {
+                "type": "select",
+                'select': {
+                    'name': issue.fields.status.name
+                }
+            }
+        }
+    }
+    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
+    print(response.json())
+
+
+def createSubTask(issue):
+    print(f'start create subtask, issue.key[{issue.key}]')
+    payload = {
+        "parent": {"type": "database_id", "database_id": subtask_database_id},
+        "properties": {
+            "Name": {
+                "type": "title",
+                "title": [{"type": "text", "text": {"content": f"[{issue.key}] {issue.fields.summary}"}}]
+            },
+            'Assignee': {
+                'type': 'people',
+                'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+            },
+            "Ticket": {
+                'type': 'url',
+                'url': jira_url_prefix + issue.key
+            },
+            "JiraStatus": {
+                "type": "select",
+                'select': {
+                    'name': issue.fields.status.name
+                }
+            },
+            "Task": {
+                "type": "relation",
+                "relation": [
+                    {
+                        "id":
+                            findByTicket(task_database_id,
+                                         f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")[
+                                0]["id"]
+                    }
+                ]
+            }
+        }
+    }
+
+    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
+    print(response.json())
+
+
+def getAssigneeByIssue(issue):
+    return peopleIdMap[
+        issue.fields.assignee.displayName if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap else 'TW - IT - BE - Willy Cheng']
+
+
+def update(issue):
+    print(f'start update ticket info, issue.key[{issue.key}]')
+    page_id = findByTicket(subtask_database_id if issue.fields.issuetype.subtask else task_database_id, f"{jira_url_prefix}{issue.key}")[0]["id"]
+    url = f'https://api.notion.com/v1/pages/{page_id}'
+    payload = {
+        "properties": {
+            'Assignee': {
+                'type': 'people',
+                'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+            },
+            "JiraStatus": {
+                "type": "select",
+                'select': {
+                    'name': issue.fields.status.name
+                }
+            }
+        }
+    }
     response = requests.patch(url, json=payload, headers=headers)
-    data = response.json()
-    if "results" in data:
-        return data["results"]
-    else:
-        raise ValueError("[findAllReleases] fetch notion data by issue key failed")
+    return response.json()
 
-
-if __name__ == '__main__':
-    for item in findByReleaseDate("2023-11-13"):
-        print(item.getTitle())
-    # for item in findByReleaseDate("2023-11-13"):
-    #     # print(item)
-    #     print(item["properties"]["Name"]["title"][0]["plain_text"])
-    #     print(item["properties"]["Project"]["select"]["name"])
-    #     print(item["properties"]["Ticket"]["url"])
-    #     for attachment in item["properties"]["attachment"]["multi_select"]:
-    #         print(attachment["name"])
-    # print()
+# if __name__ == '__main__':
+# for item in findByReleaseDate("2023-11-13"):
+#     print(item.getTitle())
+# for item in findByReleaseDate("2023-11-13"):
+#     # print(item)
+#     print(item["properties"]["Name"]["title"][0]["plain_text"])
+#     print(item["properties"]["Project"]["select"]["name"])
+#     print(item["properties"]["Ticket"]["url"])
+#     for attachment in item["properties"]["attachment"]["multi_select"]:
+#         print(attachment["name"])
+# print()

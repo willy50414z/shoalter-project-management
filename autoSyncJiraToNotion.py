@@ -1,52 +1,90 @@
 from util import JiraUtil, NotionUtil
 
-#NotionUtil.createPage('EER-XXX', 'title','task','willy.cheng@shoalter.com')
-#print(NotionUtil.findByTicketLike('MS-2831'))
+# NotionUtil.createPage('EER-XXX', 'title','task','willy.cheng@shoalter.com')
+# print(NotionUtil.findByTicketLike('MS-2831'))
 
-excludeTicket = ["MS-1490","MS-1308"]
+excludeTicket = ["MS-1490", "MS-1308", "MS-3246"]
+excludeParentKey = ["SI-108", "SI-18"]
+completeTaskStatusList = ["Done", "Cancelled", "Pending UAT", "Launch Ready", "Closed", "In Testing", "已關閉", "完成",
+                          "On Hold", "已取消"]
+
 
 def createNotionTaskFromJira():
     # fetch JIRA incomplete ticket
-    issues = JiraUtil.getIncompletedTask()
+    issueList = JiraUtil.getIncompletedTask()
 
-    #for issue in issues:
-    #    print(issue.key)iddaa--ddd  sda1231
+    # filt out build and complete ticket
+    issueList = list(filter(lambda issue: not issue.key.startswith('BUILD') and ((
+                                                                                         not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
+                                                                                         issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
+                            issueList))
+    #sort => build main ticket first
+    issueList = sorted(issueList, key=lambda issue: issue.fields.issuetype.subtask)
 
     # check is ticket exist in notion
-    for issue in issues:
+    for issue in issueList:
         # only create subtask or task without subtask
-        if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD') and (issue.fields.issuetype.subtask or 0 == len(issue.fields.subtasks)):
-            print(f"check notion contains ticket or not, ticket[{issue.key}]")
-            notionItemList = NotionUtil.findByTicketLike(issue.key)
-            
+        if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
+            notionItemList = NotionUtil.findByTicket(
+                NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.task_database_id,
+                NotionUtil.jira_url_prefix + issue.key)
             if 0 == len(notionItemList):
-                #get default assignee
-                displayName = 'TW - IT - BE - Willy Cheng'
-                if issue.fields.assignee is not None:
-                    displayName = issue.fields.assignee.displayName
-                    
-                #exclude dead ticket
-                if issue.key in excludeTicket:
-                    print(f"[{issue.key}] is excluded ticket")
-                    continue
-                    
+                # create notion
                 if issue.fields.issuetype.subtask:
-                    print(f"ticket is not exist. Start to create ticket to notion, ticket[{issue.key}]")
-                    NotionUtil.createPage(issue.key, issue.fields.summary, issue.fields.parent.key, displayName)
+                    NotionUtil.createSubTask(issue)
                 else:
-                    NotionUtil.createPage(issue.key, issue.fields.summary, issue.key, displayName)
+                    NotionUtil.createTask(issue)
+                    NotionUtil.createSubTask(issue)
             else:
-                #notion exist => update ticket info
-                print(f"ticket is exist, ticket[{issue.key}]")
+                # update notion
+                NotionUtil.update(issue)
+
+            # print(f"check notion contains ticket or not, ticket[{issue.key}]")
+            # notionItemList = NotionUtil.findByTicketLike(issue.key)
+            #
+            # if 0 == len(notionItemList):
+            #     #get default assignee
+            #     displayName = 'TW - IT - BE - Willy Cheng'
+            #     if issue.fields.assignee is not None:
+            #         displayName = issue.fields.assignee.displayName
+            #
+            #     #exclude dead ticket
+            #     if issue.key in excludeTicket:
+            #         print(f"[{issue.key}] is excluded ticket")
+            #         continue
+            #
+            #     if issue.fields.issuetype.subtask:
+            #         print(f"ticket is not exist. Start to create ticket to notion, ticket[{issue.key}]")
+            #         NotionUtil.createPage(issue.key, issue.fields.summary, issue.fields.parent.key, displayName)
+            #     else:
+            #         NotionUtil.createPage(issue)
+            # else:
+            #     #notion exist => update ticket info
+            #     print(f"ticket is exist, ticket[{issue.key}]")
+
+
 # create notion item
 
 # update notion status
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
+    # issueList = JiraUtil.getIncompletedTask()
+    #
+    # for issue in issueList:
+    #     print(issue.key)
+    #
+    # issueList = list(filter(lambda issue: not issue.key.startswith('BUILD') and ((
+    #                                                                                      not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
+    #                                                                                      issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
+    #                         issueList))
+    # print("-------------------------")
+    # for issue in issueList:
+    #     print(issue.key + " - " + issue.fields.parent.fields.status.name)
+
     createNotionTaskFromJira()
-    NotionUtil.deleteOutOfDateTask()
-    # print(NotionUtil.findByTicketLike("xxx"))
+    # NotionUtil.deleteOutOfDateTask()
+    # print(NotionUtil.findByTicketLike("2428"))
 
     # notionItems = NotionUtil.findAllReleases()
     # for notionItem in notionItems:
