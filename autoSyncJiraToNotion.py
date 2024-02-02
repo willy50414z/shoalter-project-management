@@ -1,7 +1,6 @@
 from util import JiraUtil, NotionUtil
-
-# NotionUtil.createPage('EER-XXX', 'title','task','willy.cheng@shoalter.com')
-# print(NotionUtil.findByTicketLike('MS-2831'))
+import time
+from datetime import datetime
 
 excludeTicket = ["MS-1490", "MS-1308", "MS-3246"]
 excludeParentKey = ["SI-108", "SI-18"]
@@ -39,29 +38,6 @@ def createNotionTaskFromJira():
                 # update notion
                 NotionUtil.update(issue)
 
-            # print(f"check notion contains ticket or not, ticket[{issue.key}]")
-            # notionItemList = NotionUtil.findByTicketLike(issue.key)
-            #
-            # if 0 == len(notionItemList):
-            #     #get default assignee
-            #     displayName = 'TW - IT - BE - Willy Cheng'
-            #     if issue.fields.assignee is not None:
-            #         displayName = issue.fields.assignee.displayName
-            #
-            #     #exclude dead ticket
-            #     if issue.key in excludeTicket:
-            #         print(f"[{issue.key}] is excluded ticket")
-            #         continue
-            #
-            #     if issue.fields.issuetype.subtask:
-            #         print(f"ticket is not exist. Start to create ticket to notion, ticket[{issue.key}]")
-            #         NotionUtil.createPage(issue.key, issue.fields.summary, issue.fields.parent.key, displayName)
-            #     else:
-            #         NotionUtil.createPage(issue)
-            # else:
-            #     #notion exist => update ticket info
-            #     print(f"ticket is exist, ticket[{issue.key}]")
-
 
 # create notion item
 
@@ -81,8 +57,11 @@ if __name__ == '__main__':
     # print("-------------------------")
     # for issue in issueList:
     #     print(issue.key + " - " + issue.fields.parent.fields.status.name)
+    while 1 == 1:
+        print("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        createNotionTaskFromJira()
 
-    createNotionTaskFromJira()
+        time.sleep(300)
     # NotionUtil.deleteOutOfDateTask()
     # print(NotionUtil.findByTicketLike("2428"))
 

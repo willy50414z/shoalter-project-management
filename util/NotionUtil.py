@@ -219,15 +219,14 @@ def getAssigneeByIssue(issue):
 
 
 def update(issue):
-    print(f'start update ticket info, issue.key[{issue.key}]')
     page_id = findByTicket(subtask_database_id if issue.fields.issuetype.subtask else task_database_id, f"{jira_url_prefix}{issue.key}")[0]["id"]
     url = f'https://api.notion.com/v1/pages/{page_id}'
     payload = {
         "properties": {
-            'Assignee': {
-                'type': 'people',
-                'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
-            },
+            # 'Assignee': {
+            #     'type': 'people',
+            #     'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+            # },
             "JiraStatus": {
                 "type": "select",
                 'select': {

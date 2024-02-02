@@ -4,7 +4,7 @@ from jira import JIRA
 jiraOptions = {'server': "https://hongkongtv.atlassian.net/"}
 
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", "ATATT3xFfGF0tVciIsw0Jf1Y9rz6GXVKI1pJz1gURCCl0TyT2VzP8f7ftNPhnNASZBiraoxqdEs1JFdyUhiM1JlX9zB-mtW-268SUWiWCTifgSYS3y0Bc2k_LV9dHfeCqeTju77Ni5Y59B--Su7yiBnImLPPTcsrHx6_xWVN8ypO5BoF-g78RB8=1DA8FB69"))
+	"willy.cheng@shoalter.com", "ATATT3xFfGF0WJXWkqfuK9LAbUQAMDz-Ewu5puCRF6OGt_KHrxE4-vBKtLHvH1kEPr9gx57GlHxXqVN3EgZ73kH6Q03wo07ZJH-l5kaR_0nR36YcyjlnWiaPmOnW8O648gEWHNExYtnkThugEwphbmkyiGvMuWn02-hbZSFdnlj7WAwF0C5Fi6I=AA99A467"))
 
 def getIncompletedTask():
     # assemble filter
