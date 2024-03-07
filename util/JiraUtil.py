@@ -4,7 +4,7 @@ from jira import JIRA
 jiraOptions = {'server': "https://hongkongtv.atlassian.net/"}
 
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", "ATATT3xFfGF0WJXWkqfuK9LAbUQAMDz-Ewu5puCRF6OGt_KHrxE4-vBKtLHvH1kEPr9gx57GlHxXqVN3EgZ73kH6Q03wo07ZJH-l5kaR_0nR36YcyjlnWiaPmOnW8O648gEWHNExYtnkThugEwphbmkyiGvMuWn02-hbZSFdnlj7WAwF0C5Fi6I=AA99A467"))
+	"willy.cheng@shoalter.com", "ATATT3xFfGF0XGfzdptIO62eau4pm2hpXScs6xdiBCJD2WNIo_ZXd6xeXLQSVb_iGHSuWi6IgKN_8zqHElDUh7bc1DczmyxodkIZxKO6rtt6xQ1_PKn_i99Jcp-75t4k6YDEaKQV5Dw5hQTBOcT-2zBB2jEY4GVV-Qee3wT2rOLssQ_oAHnM2rc=8B341FF0"))
 
 def getIncompletedTask():
     # assemble filter
@@ -16,7 +16,7 @@ def getIncompletedTask():
                'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen']
     devPIC_query = ', '.join([f'"{devPIC}"' for devPIC in devPICs])
 
-    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed', "In Testing"]
+    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
     status_query = ', '.join([f'"{status}"' for status in statuses])
 
     issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement']
@@ -39,6 +39,11 @@ def getIncompletedTask():
         allIssues.extend(issues.iterable)
         startIdx += fetch_size
     return allIssues
+
+def findIssueByKey(issueKey):
+    return jira.issue(id=issueKey)
+    # response = requests.post(url, json=payload, headers=headers)
+
 
 #get single ticket
 #singleIssue = jira.issue('SI-18')

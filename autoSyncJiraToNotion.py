@@ -4,7 +4,7 @@ from datetime import datetime
 
 excludeTicket = ["MS-1490", "MS-1308", "MS-3246"]
 excludeParentKey = ["SI-108", "SI-18"]
-completeTaskStatusList = ["Done", "Cancelled", "Pending UAT", "Launch Ready", "Closed", "In Testing", "已關閉", "完成",
+completeTaskStatusList = ["Done", "Cancelled", "Pending UAT", "Launch Ready", "Closed", "已關閉", "完成",
                           "On Hold", "已取消"]
 
 
@@ -22,6 +22,8 @@ def createNotionTaskFromJira():
 
     # check is ticket exist in notion
     for issue in issueList:
+        # if issue.key == "EER-577":
+        #     print("aa")
         # only create subtask or task without subtask
         if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
             notionItemList = NotionUtil.findByTicket(
@@ -33,35 +35,62 @@ def createNotionTaskFromJira():
                     NotionUtil.createSubTask(issue)
                 else:
                     NotionUtil.createTask(issue)
-                    NotionUtil.createSubTask(issue)
-            else:
-                # update notion
-                NotionUtil.update(issue)
+                    # 有subtask的task就不需要建subtasks
+                    if len(issue.fields.subtasks) == 0:
+                        NotionUtil.createSubTask(issue)
+
+def updateNotionTicketStatus():
+    itemList = NotionUtil.findOpenedItem(NotionUtil.task_database_id)
+    for item in itemList:
+        if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
+            urlAr = item["properties"]["Ticket"]["url"].split("/")
+            issueKey = urlAr[len(urlAr)-1]
+            NotionUtil.updateTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
+
+    itemList = NotionUtil.findOpenedItem(NotionUtil.subtask_database_id)
+    for item in itemList:
+        if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
+            urlAr = item["properties"]["Ticket"]["url"].split("/")
+            issueKey = urlAr[len(urlAr) - 1]
+            NotionUtil.updateSubTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
 
 
 # create notion item
 
 # update notion status
 
+def printJiraTicket():
+    issueList = JiraUtil.getIncompletedTask()
+
+    for issue in issueList:
+        print(issue.key)
+
+    # filt out build and complete ticket
+    issueList = list(filter(lambda issue: not issue.key.startswith('BUILD') and ((
+                                                                                         not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
+                                                                                         issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
+                            issueList))
+    # sort => build main ticket first
+    issueList = sorted(issueList, key=lambda issue: issue.fields.issuetype.subtask)
+
+    print("-------------------------")
+    for issue in issueList:
+        print(issue.key)
 
 if __name__ == '__main__':
-    # issueList = JiraUtil.getIncompletedTask()
-    #
-    # for issue in issueList:
-    #     print(issue.key)
-    #
-    # issueList = list(filter(lambda issue: not issue.key.startswith('BUILD') and ((
-    #                                                                                      not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
-    #                                                                                      issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
-    #                         issueList))
-    # print("-------------------------")
-    # for issue in issueList:
-    #     print(issue.key + " - " + issue.fields.parent.fields.status.name)
+    # printJiraTicket()
+    # updateNotionTicketStatus()
+    # print(JiraUtil.findIssueByKey("EER-86").fields.status.name)
+    # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
+    # print(NotionUtil.findByTicketLike("742"))
+
     while 1 == 1:
         print("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
         createNotionTaskFromJira()
+        updateNotionTicketStatus()
+        print("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        time.sleep(1800)
 
-        time.sleep(300)
     # NotionUtil.deleteOutOfDateTask()
     # print(NotionUtil.findByTicketLike("2428"))
 

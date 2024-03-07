@@ -56,7 +56,7 @@ def findByReleaseDate(releaseDate):
 
 
 def findByTicketLike(issueKey):
-    url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
+    url = f'https://api.notion.com/v1/databases/{subtask_database_id}/query'
     payload = {"page_size": 100, "filter": {
         "property": "Ticket",
         "rich_text": {
@@ -72,19 +72,52 @@ def findByTicketLike(issueKey):
 
 
 def findByTicket(database_id, issueKey):
+    try:
+        url = f'https://api.notion.com/v1/databases/{database_id}/query'
+        payload = {"page_size": 100, "filter": {
+            "property": "Ticket",
+            "rich_text": {
+                "equals": issueKey
+            }
+        }}
+        response = requests.post(url, json=payload, headers=headers)
+        data = response.json()
+        if "results" in data:
+            if len(data["results"]) == 0:
+                print("notion item not found, databaseId["+database_id+"]issueKey["+issueKey+"]")
+            return data["results"]
+        else:
+            raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
+    except Exception as e:
+        print("can't get notion item, databaseId["+database_id+"]issueKey["+issueKey+"]")
+        raise e
+
+
+def findOpenedItem(database_id):
     url = f'https://api.notion.com/v1/databases/{database_id}/query'
     payload = {"page_size": 100, "filter": {
-        "property": "Ticket",
-        "rich_text": {
-            "equals": issueKey
-        }
+        "and": [
+            {
+                "property": "JiraStatus",
+                "select": {
+                    "does_not_equal": "CLOSED"
+                }
+            },
+            {
+                "property": "JiraStatus",
+                "select": {
+                    "does_not_equal": "CANCELED"
+                }
+            }
+        ]
+
     }}
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
     if "results" in data:
         return data["results"]
     else:
-        raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
+        return data
 
 
 def deleteOutOfDateTask():
@@ -165,6 +198,12 @@ def createTask(issue):
                 'select': {
                     'name': issue.fields.status.name
                 }
+            },
+            "ReleaseDate": {
+                "type": "select",
+                'select': {
+                    'name': "uncheck"
+                }
             }
         }
     }
@@ -195,6 +234,12 @@ def createSubTask(issue):
                     'name': issue.fields.status.name
                 }
             },
+            "Status": {
+                "type": "Status",
+                'status': {
+                    'name': "Not started"
+                }
+            },
             "Task": {
                 "type": "relation",
                 "relation": [
@@ -217,27 +262,67 @@ def getAssigneeByIssue(issue):
     return peopleIdMap[
         issue.fields.assignee.displayName if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap else 'TW - IT - BE - Willy Cheng']
 
-
-def update(issue):
-    page_id = findByTicket(subtask_database_id if issue.fields.issuetype.subtask else task_database_id, f"{jira_url_prefix}{issue.key}")[0]["id"]
-    url = f'https://api.notion.com/v1/pages/{page_id}'
-    payload = {
-        "properties": {
-            # 'Assignee': {
-            #     'type': 'people',
-            #     'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
-            # },
-            "JiraStatus": {
-                "type": "select",
-                'select': {
-                    'name': issue.fields.status.name
+def updateTaskStatus(page, issue):
+    # issue.fields.fixVersions[0].name
+    # page["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
+    if page["properties"]["JiraStatus"]["select"]["name"] == issue.fields.status.name and len(
+            page["properties"]["fixVersion"]["rich_text"]) > 1 and page["properties"]["fixVersion"]["rich_text"][0][
+        "plain_text"] == issue.fields.fixVersions[0].name:
+        return ""
+    else:
+        url = f'https://api.notion.com/v1/pages/{page["id"]}'
+        payload = {
+            "properties": {
+                # 'Assignee': {
+                #     'type': 'people',
+                #     'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+                # },
+                "JiraStatus": {
+                    "type": "select",
+                    'select': {
+                        'name': issue.fields.status.name
+                    }
+                },
+                "fixVersion": {
+                    'rich_text': [{
+                        'text': {
+                            'content': issue.fields.fixVersions[0].name if len(issue.fields.fixVersions) > 0 else ""}
+                    }]
                 }
             }
         }
-    }
-    response = requests.patch(url, json=payload, headers=headers)
-    return response.json()
+        response = requests.patch(url, json=payload, headers=headers)
+        return response.json()
 
+def updateSubTaskStatus(page, issue):
+    # issue.fields.fixVersions[0].name
+    # page["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
+    try:
+        if page["properties"]["JiraStatus"]["select"] is not None and page["properties"]["JiraStatus"]["select"]["name"] == issue.fields.status.name:
+            return ""
+        else:
+            url = f'https://api.notion.com/v1/pages/{page["id"]}'
+            payload = {
+                "properties": {
+                    # 'Assignee': {
+                    #     'type': 'people',
+                    #     'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+                    # },
+                    "JiraStatus": {
+                        "type": "select",
+                        'select': {
+                            'name': issue.fields.status.name
+                        }
+                    }
+                }
+            }
+            response = requests.patch(url, json=payload, headers=headers)
+            return response.json()
+    except Exception:
+        print("[updateSubTaskStatus] update SubTask Status throw error")
+        print(page)
+        print(issue)
+        raise
 # if __name__ == '__main__':
 # for item in findByReleaseDate("2023-11-13"):
 #     print(item.getTitle())
