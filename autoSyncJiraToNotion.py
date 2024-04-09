@@ -1,6 +1,7 @@
 from util import JiraUtil, NotionUtil
 import time
 from datetime import datetime
+import logging
 
 excludeTicket = ["MS-1490", "MS-1308", "MS-3246"]
 excludeParentKey = ["SI-108", "SI-18"]
@@ -22,11 +23,11 @@ def createNotionTaskFromJira():
 
     # check is ticket exist in notion
     for issue in issueList:
-        # if issue.key == "EER-577":
-        #     print("aa")
+        if issue.key == "EER-790":
+            print("aa")
         # only create subtask or task without subtask
         if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
-            notionItemList = NotionUtil.findByTicket(
+            notionItemList = NotionUtil. findByTicket(
                 NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.task_database_id,
                 NotionUtil.jira_url_prefix + issue.key)
             if 0 == len(notionItemList):
@@ -84,11 +85,12 @@ if __name__ == '__main__':
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
     # print(NotionUtil.findByTicketLike("742"))
 
+    logging.basicConfig(filename='E:/tmp/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
-        print("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
         createNotionTaskFromJira()
         updateNotionTicketStatus()
-        print("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
         time.sleep(1800)
 
     # NotionUtil.deleteOutOfDateTask()

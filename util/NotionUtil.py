@@ -6,7 +6,6 @@ from dto.NotionTaskDto import NotionTaskDto
 task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
 subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
 release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
-integration_token = 'secret_1gyebl9EyV1eMpsIU2wSsUJMSiw4LqGHNJqqan4Qvvj'  # Replace with your integration token
 
 jira_url_prefix = "https://hongkongtv.atlassian.net/browse/"
 
@@ -84,12 +83,12 @@ def findByTicket(database_id, issueKey):
         data = response.json()
         if "results" in data:
             if len(data["results"]) == 0:
-                print("notion item not found, databaseId["+database_id+"]issueKey["+issueKey+"]")
+                print("notion item not found, databaseId[" + database_id + "]issueKey[" + issueKey + "]")
             return data["results"]
         else:
             raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
     except Exception as e:
-        print("can't get notion item, databaseId["+database_id+"]issueKey["+issueKey+"]")
+        print("can't get notion item, databaseId[" + database_id + "]issueKey[" + issueKey + "]")
         raise e
 
 
@@ -234,12 +233,7 @@ def createSubTask(issue):
                     'name': issue.fields.status.name
                 }
             },
-            "Status": {
-                "type": "Status",
-                'status': {
-                    'name': "Not started"
-                }
-            },
+            "Status": {"status": {"name": "Not started"}},
             "Task": {
                 "type": "relation",
                 "relation": [
@@ -261,6 +255,7 @@ def createSubTask(issue):
 def getAssigneeByIssue(issue):
     return peopleIdMap[
         issue.fields.assignee.displayName if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap else 'TW - IT - BE - Willy Cheng']
+
 
 def updateTaskStatus(page, issue):
     # issue.fields.fixVersions[0].name
@@ -294,11 +289,13 @@ def updateTaskStatus(page, issue):
         response = requests.patch(url, json=payload, headers=headers)
         return response.json()
 
+
 def updateSubTaskStatus(page, issue):
     # issue.fields.fixVersions[0].name
     # page["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
     try:
-        if page["properties"]["JiraStatus"]["select"] is not None and page["properties"]["JiraStatus"]["select"]["name"] == issue.fields.status.name:
+        if page["properties"]["JiraStatus"]["select"] is not None and page["properties"]["JiraStatus"]["select"][
+            "name"] == issue.fields.status.name:
             return ""
         else:
             url = f'https://api.notion.com/v1/pages/{page["id"]}'
