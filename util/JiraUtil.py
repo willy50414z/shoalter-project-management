@@ -4,7 +4,7 @@ from jira import JIRA
 jiraOptions = {'server': "https://hongkongtv.atlassian.net/"}
 
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", ""))
+	"willy.cheng@shoalter.com", "xxxx"))
 
 def getIncompletedTask():
     # assemble filter

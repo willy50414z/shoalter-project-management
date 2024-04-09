@@ -6,6 +6,7 @@ from dto.NotionTaskDto import NotionTaskDto
 task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
 subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
 release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
+integration_token = 'xxxx'  # Replace with your integration token
 
 jira_url_prefix = "https://hongkongtv.atlassian.net/browse/"
 
