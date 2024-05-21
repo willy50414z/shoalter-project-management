@@ -1,10 +1,12 @@
 import pyperclip
 import json
 
+
 def removeEmptyList(json, key):
     if key in json and isinstance(json[key], list) and len(json[key]) == 0:
         json.pop(key)
     return json
+
 
 def removeEmptyStr(json, key):
     if key in json and isinstance(json[key], str) and json[key] == "":
@@ -16,6 +18,7 @@ def removeKeyIfExist(json, key):
     if key in json:
         json.pop(key)
     return json
+
 
 def sortKey(json):
     sorted_keys = sorted(json.keys())
@@ -31,15 +34,26 @@ def sortKey(json):
         sorted_data_dict[key] = json[key]
     return sorted_data_dict
 
+
 def sort_store_product(json_data):
     sorted_items = sorted(json_data["stores"][0]["products"],
                           key=lambda x: x["product"]["baseOptions"][0]["selected"]["code"])
     json_data["stores"][0]["products"] = sorted_items
 
+
 def sort_freegift(json_data):
     sorted_items = sorted(json_data["freeGifts"],
                           key=lambda x: x["orderEntries"][0]["product"]["code"])
     json_data["freeGifts"] = sorted_items
+
+
+def sort_product_store_tags(json_data):
+    for product in json_data["stores"][0]["products"]:
+        if "storeTags" in product["product"]:
+            sorted_items = sorted(product["product"]["storeTags"],
+                                  key=lambda x: x["storeType"])
+            product["product"]["storeTags"] = sorted_items
+
 
 def remove_empty_list(json_data):
     if "stores" in json_data and len(json_data["stores"]) > 0:
@@ -107,36 +121,47 @@ def remove_empty_list(json_data):
         for thresholdPromotionDetails in json_data["thresholdPromotionDetails"]:
             removeEmptyList(thresholdPromotionDetails, "giveAwayCouponCodes")
 
+
 def remove_empty_srting(json_data):
     for thresholdPromotionDetail in json_data["thresholdPromotionDetails"]:
         for consumedEntry in thresholdPromotionDetail["consumedEntries"]:
             removeEmptyStr(consumedEntry, "name")
+
 
 def remove_new_fields(json_data):
     if "stores" in json_data and len(json_data["stores"]) > 0:
         removeKeyIfExist(json_data["stores"][0], "isHKTVBatch")
         for product in json_data["stores"][0]["products"]:
             removeKeyIfExist(product["product"]["baseOptions"][0]["selected"]["stock"], "mainlandWarehouse")
-            removeKeyIfExist(product["product"]["baseOptions"][0]["selected"]["stock"], "warehouseCode")
             removeKeyIfExist(product["product"], "extendedWarrantyProductList")
             removeKeyIfExist(product["product"], "mainlandWarehouse")
             removeKeyIfExist(product["product"], "pricePercentage")
             removeKeyIfExist(product, "deliveryLabelCodeInSchedule")
             removeKeyIfExist(product["product"]["stock"], "mainlandWarehouse")
-            removeKeyIfExist(product["product"]["stock"], "warehouseCode")
-            if "deliveryLabelScheduleCode" in product["product"] and len(product["product"]["deliveryLabelScheduleCode"]) > 0:
+            removeKeyIfExist(product, "deliveryLabelCodeInSchedule")
+            removeKeyIfExist(product["product"], "deliveryLabelCode")
+            if "deliveryLabelScheduleCode" in product["product"] and len(
+                    product["product"]["deliveryLabelScheduleCode"]) > 0:
                 for deliveryLabelScheduleCode in product["product"]["deliveryLabelScheduleCode"]:
                     removeKeyIfExist(deliveryLabelScheduleCode, "earliestDeliveryTimestamp")
-    if "productOutOfStock" in json_data and "deliveryLabelScheduleCode" in json_data["productOutOfStock"] and len(json_data["productOutOfStock"]["deliveryLabelScheduleCode"]) > 0:
-        for deliveryLabelScheduleCode in json_data["productOutOfStock"]["deliveryLabelScheduleCode"]:
-            removeKeyIfExist(deliveryLabelScheduleCode, "earliestDeliveryTimestamp")
-
+    if "productOutOfStock" in json_data and len(json_data["productOutOfStock"]) > 0:
+        for productOutOfStock in json_data["productOutOfStock"]:
+            removeKeyIfExist(productOutOfStock, "deliveryLabelCode")
+            if "deliveryLabelScheduleCode" in json_data["productOutOfStock"] and len(
+                    json_data["productOutOfStock"]["deliveryLabelScheduleCode"]) > 0:
+                for deliveryLabelScheduleCode in json_data["productOutOfStock"]["deliveryLabelScheduleCode"]:
+                    removeKeyIfExist(deliveryLabelScheduleCode, "earliestDeliveryTimestamp")
 
     if "freeGifts" in json_data and len(json_data["freeGifts"]) > 0:
         for freeGift in json_data["freeGifts"]:
             for orderEntry in freeGift["orderEntries"]:
                 removeKeyIfExist(orderEntry["product"], "mainlandWarehouse")
                 removeKeyIfExist(orderEntry["product"], "pricePercentage")
+                if "deliveryLabelScheduleCode" in orderEntry["product"] and len(
+                        orderEntry["product"]["deliveryLabelScheduleCode"]) > 0:
+                    for deliveryLabelScheduleCode in orderEntry["product"]["deliveryLabelScheduleCode"]:
+                        removeKeyIfExist(deliveryLabelScheduleCode, "earliestDeliveryTimestamp")
+
 
 if __name__ == '__main__':
     # 读取剪贴板内容
@@ -145,12 +170,13 @@ if __name__ == '__main__':
 
     sort_store_product(json_data)
     sort_freegift(json_data)
+    # sort_product_store_tags(json_data)
 
     remove_empty_list(json_data)
     remove_empty_srting(json_data)
     remove_new_fields(json_data)
 
-    #sort key
+    # sort key
     json_data = sortKey(json_data)
 
     output_json = json.dumps(json_data, ensure_ascii=False, indent=4)

@@ -6,7 +6,7 @@ from dto.NotionTaskDto import NotionTaskDto
 task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
 subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
 release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
-integration_token = 'xxxx'  # Replace with your integration token
+integration_token = 'xxx'  # Replace with your integration token
 
 jira_url_prefix = "https://hongkongtv.atlassian.net/browse/"
 
@@ -36,21 +36,23 @@ def findAllReleases():
         raise ValueError("[findAllReleases] fetch notion data by issue key failed")
 
 
-def findByReleaseDate(releaseDate):
+def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
     url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
-    payload = {"page_size": 100, "filter": {
+    payload = {"page_size": 100, "filter": {"and": [{
         "property": "ReleaseDate",
         "select": {
             "equals": releaseDate
         }
-    }}
+    }, {
+        "property": "BuildTicket",
+        "url": {
+            "is_empty": True
+        }
+    }]}}
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
     if "results" in data:
-        notionItemList = []
-        for item in data["results"]:
-            notionItemList.append(NotionTaskDto(item))
-        return notionItemList
+        return data["results"]
     else:
         raise ValueError("[findByTicketLike] fetch notion data by issue key failed, releaseDate[" + releaseDate + "]")
 
@@ -291,6 +293,19 @@ def updateTaskStatus(page, issue):
         return response.json()
 
 
+def update_build_ticket(page_id, issue_key):
+    url = f'https://api.notion.com/v1/pages/{page_id}'
+    payload = {"properties": {
+            "BuildTicket": {
+                'type': 'url',
+                'url': jira_url_prefix + str(issue_key)
+            }
+        }
+    }
+    response = requests.patch(url, json=payload, headers=headers)
+    return response.json()
+
+
 def updateSubTaskStatus(page, issue):
     # issue.fields.fixVersions[0].name
     # page["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
@@ -314,6 +329,8 @@ def updateSubTaskStatus(page, issue):
                     }
                 }
             }
+            if issue.fields.status.name == "已取消":
+                payload["properties"]["Status"] = {"status": {"name": "Done"}}
             response = requests.patch(url, json=payload, headers=headers)
             return response.json()
     except Exception:
