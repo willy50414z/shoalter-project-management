@@ -1,9 +1,12 @@
+import configparser
+
 import requests
 from datetime import datetime
 from urllib.parse import quote
-
+config = configparser.ConfigParser()
+config.read('application.ini')
 headers = {
-    'PRIVATE-TOKEN': 'xxx'
+    'PRIVATE-TOKEN': config["DEFAULT"]["gitlab_token"]
 }
 noDeleteBranchs = ["dev", "main", "staging"]
 

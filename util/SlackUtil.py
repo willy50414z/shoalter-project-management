@@ -1,10 +1,13 @@
+import configparser
 import json
 import time
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
+config = configparser.ConfigParser()
+config.read('application.ini')
 # Set your Slack API token
-slack_token = "xxx"
+slack_token = config["DEFAULT"]["slack_token"]
 # Set the channel where you want to retrieve messages
 # channel_id = "C05UMG8CA65"
 

@@ -1,10 +1,14 @@
 # import the installed Jira library
+import configparser
+
 from jira import JIRA
 
 jiraOptions = {'server': "https://hongkongtv.atlassian.net/"}
-
+config = configparser.ConfigParser()
+config.read('application.ini')
+aa = config["DEFAULT"]["jira_token"]
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", "xxxx"))
+	"willy.cheng@shoalter.com", config["DEFAULT"]["jira_token"]))
 
 def getIncompletedTask():
     # assemble filter
