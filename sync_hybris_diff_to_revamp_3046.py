@@ -9,6 +9,7 @@ from util import GitUtil
 branch_name = "POC/check_revamp_3046"
 repo_path = "E:/Code/hktv-hybris"
 
+
 def get_branch_diff(repo_path, branch_name):
     diff_info = []
     commits = GitUtil.get_branch_commits(repo_path, branch_name)
@@ -89,7 +90,8 @@ def get_revamp_related_info(method):
 def get_revamp_related_change_list(commit_diff, repo_dir):
     change_list = []
     for key, value in commit_diff.items():
-        if "sha" != key and "parent_sha" != key and key.endswith(".java") and not key.endswith("/ThirdPartyLoginPageController.java"):
+        if "sha" != key and "parent_sha" != key and key.endswith(".java") and not key.endswith(
+                "/ThirdPartyLoginPageController.java"):
             file_path = repo_dir + "/" + key
             # change to parent sha
             GitUtil.reset(repo_dir, commit_diff["parent_sha"])
@@ -107,7 +109,6 @@ def get_revamp_related_change_list(commit_diff, repo_dir):
 
 if __name__ == '__main__':
     # get_java_structure("C:/work/hybris_docker/hybris_docker_hktvmall/bin/ext-hktv/hktvstorefront/web/src/hk/com/hktv/storefront/controllers/pages/ThirdPartyLoginPageController.java")
-
 
     branch_diff = get_branch_diff(repo_path, branch_name)
     print(f"hybris branch[{branch_name}]commits size[{len(branch_diff)}]diff lines[{str(branch_diff)}]")
@@ -133,7 +134,12 @@ if __name__ == '__main__':
             else:
                 branch_change_summary[file_path]["sha"].append(sha)
 
+    related_service = {1}
+    for file_path in branch_change_summary.keys():
+        for related_method in branch_change_summary[file_path]["related_method"]:
+            related_service.add(related_method.split("#")[0])
+
     output_json = json.dumps({"branch": branch_name, "commits_change_summary": revamp_related_change_summary,
-                              "branch_change_summary": branch_change_summary},
+                              "branch_change_summary": branch_change_summary, "related_service": related_service},
                              ensure_ascii=False, indent=4)
     print(output_json)
