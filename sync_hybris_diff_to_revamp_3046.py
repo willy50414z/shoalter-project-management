@@ -6,18 +6,20 @@ import javalang
 
 from util import GitUtil
 
+branch_name = "POC/check_revamp_3046"
+repo_path = "E:/Code/hktv-hybris"
 
 def get_branch_diff(repo_path, branch_name):
     diff_info = []
     commits = GitUtil.get_branch_commits(repo_path, branch_name)
     for commit in commits:
-        if branch_name.split("/")[1] in commit.message:
+        if "HYBRIS-3189" in commit.message:
+            return diff_info
+        else:
             commit_diff_info = {"sha": commit.hexsha, "parent_sha": commit.parents[0].hexsha,
                                 "committed_date": commit.committed_date}
             commit_diff_info.update(GitUtil.get_commit_diff(repo_path, commit))
             diff_info.append(commit_diff_info)
-        else:
-            return diff_info
 
 
 def get_java_structure(java_class_file_path):
@@ -87,12 +89,12 @@ def get_revamp_related_info(method):
 def get_revamp_related_change_list(commit_diff, repo_dir):
     change_list = []
     for key, value in commit_diff.items():
-        if "sha" != key and "parent_sha" != key and key.endswith(".java"):
+        if "sha" != key and "parent_sha" != key and key.endswith(".java") and not key.endswith("/ThirdPartyLoginPageController.java"):
             file_path = repo_dir + "/" + key
             # change to parent sha
-            GitUtil.reset(repo_path, commit_diff["parent_sha"])
-            java_structure = get_java_structure(file_path)
+            GitUtil.reset(repo_dir, commit_diff["parent_sha"])
             print(f"start analyze changed file, sha[{commit_diff["parent_sha"]}]file_path[{file_path}]")
+            java_structure = get_java_structure(file_path)
             for line_num in value:
                 # find method info
                 method = find_method_by_line_number(java_structure, line_num)
@@ -104,8 +106,8 @@ def get_revamp_related_change_list(commit_diff, repo_dir):
 
 
 if __name__ == '__main__':
-    repo_path = "E:/Code/hktv-hybris"
-    branch_name = "POC/EcomRevamp_commit"
+    # get_java_structure("C:/work/hybris_docker/hybris_docker_hktvmall/bin/ext-hktv/hktvstorefront/web/src/hk/com/hktv/storefront/controllers/pages/ThirdPartyLoginPageController.java")
+
 
     branch_diff = get_branch_diff(repo_path, branch_name)
     print(f"hybris branch[{branch_name}]commits size[{len(branch_diff)}]diff lines[{str(branch_diff)}]")

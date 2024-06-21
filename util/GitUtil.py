@@ -21,14 +21,21 @@ def merge_and_push(repo_path, source, target):
 
 def get_branch_commits(repo_path, branch_name):
     repo = git.Repo(repo_path)
-    if branch_name not in repo.branches:
-        repo.remotes.origin.fetch()
-        repo.git.checkout(branch_name)
-    repo.git.pull()
+    checkout(repo_path, "dev")
+    if branch_name in repo.branches:
+        repo.delete_head(branch_name, force=True)
+    checkout(repo_path, branch_name)
+
     branch = repo.branches[branch_name]
     commits = list(branch.commit.iter_parents())
     commits.insert(0, branch.commit)
     return commits
+
+def checkout(repo_path, branch_name):
+    repo = git.Repo(repo_path)
+    if branch_name not in repo.branches:
+        repo.remotes.origin.fetch()
+    repo.git.checkout(branch_name)
 
 
 def get_commit_diff(repo_path, commit):
@@ -60,3 +67,6 @@ def get_commit_diff(repo_path, commit):
 def reset(repo_path, sha):
     repo = git.Repo(repo_path)
     repo.git.reset(sha, hard=True)
+
+def clone(repo_url, clone_dir):
+    return git.Repo.clone_from(repo_url, clone_dir)

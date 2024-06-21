@@ -51,15 +51,17 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
     }, {
         "property": "BuildTicket",
         "url": {
-            "is_empty": True
+            "does_not_equal": "xx"
         }
-    }]}}
+
+    }
+    ]}}
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
     if "results" in data:
         return data["results"]
     else:
-        raise ValueError("[findByTicketLike] fetch notion data by issue key failed, releaseDate[" + releaseDate + "]")
+        raise ValueError("[findByTicketLike] fetch notion data by issue key failed, releaseDate[" + releaseDate + "]data["+str(data)+"]")
 
 
 def findByTicketLike(issueKey):
@@ -114,6 +116,12 @@ def findOpenedItem(database_id):
                 "property": "JiraStatus",
                 "select": {
                     "does_not_equal": "CANCELED"
+                }
+            },
+            {
+                "property": "JiraStatus",
+                "select": {
+                    "does_not_equal": "Report"
                 }
             }
         ]
@@ -214,6 +222,29 @@ def createTask(issue):
             }
         }
     }
+
+    system_name = None
+    if "[cart-service]" in issue.fields.summary:
+        system_name = "cart-service"
+    elif "[address-service]" in issue.fields.summary:
+        system_name = "address-service"
+    elif "[order-service]" in issue.fields.summary:
+        system_name = "order-service"
+    elif "[IIDS]" in issue.fields.summary:
+        system_name = "IIDS"
+    elif "[IIMS-LM]" in issue.fields.summary:
+        system_name = "IIMS-LM"
+    elif "[IIMS]" in issue.fields.summary:
+        system_name = "IIMS-HKTV"
+
+    if system_name:
+        payload["properties"]["System"] = {
+            "type": "select",
+            'select': {
+                'name': system_name
+            }
+        }
+
     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
     print(response.json())
 
@@ -274,6 +305,12 @@ def updateTaskStatus(page, issue):
         return ""
     else:
         url = f'https://api.notion.com/v1/pages/{page["id"]}'
+        fix_versions = ""
+        for fix_version in issue.fields.fixVersions:
+            fix_versions += fix_version.name + ","
+        if len(fix_versions) > 0:
+            fix_versions = fix_versions[0:len(fix_versions)-1]
+
         payload = {
             "properties": {
                 # 'Assignee': {
@@ -289,7 +326,7 @@ def updateTaskStatus(page, issue):
                 "fixVersion": {
                     'rich_text': [{
                         'text': {
-                            'content': issue.fields.fixVersions[0].name if len(issue.fields.fixVersions) > 0 else ""}
+                            'content': fix_versions}
                     }]
                 }
             }
@@ -301,11 +338,11 @@ def updateTaskStatus(page, issue):
 def update_build_ticket(page_id, issue_key):
     url = f'https://api.notion.com/v1/pages/{page_id}'
     payload = {"properties": {
-            "BuildTicket": {
-                'type': 'url',
-                'url': jira_url_prefix + str(issue_key)
-            }
+        "BuildTicket": {
+            'type': 'url',
+            'url': str(issue_key)
         }
+    }
     }
     response = requests.patch(url, json=payload, headers=headers)
     return response.json()

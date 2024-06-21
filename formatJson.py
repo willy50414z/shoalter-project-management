@@ -36,15 +36,17 @@ def sortKey(json):
 
 
 def sort_store_product(json_data):
-    sorted_items = sorted(json_data["stores"][0]["products"],
-                          key=lambda x: x["product"]["baseOptions"][0]["selected"]["code"])
-    json_data["stores"][0]["products"] = sorted_items
+    if "stores" in json_data:
+        sorted_items = sorted(json_data["stores"][0]["products"],
+                              key=lambda x: x["product"]["baseOptions"][0]["selected"]["code"])
+        json_data["stores"][0]["products"] = sorted_items
 
 
 def sort_freegift(json_data):
-    sorted_items = sorted(json_data["freeGifts"],
-                          key=lambda x: x["orderEntries"][0]["product"]["code"])
-    json_data["freeGifts"] = sorted_items
+    if "freeGifts" in json_data:
+        sorted_items = sorted(json_data["freeGifts"],
+                              key=lambda x: x["orderEntries"][0]["product"]["code"])
+        json_data["freeGifts"] = sorted_items
 
 
 def sort_product_store_tags(json_data):

@@ -21,6 +21,8 @@ def createNotionTaskFromJira():
                             issueList))
     # for issue in issueList:
     #     print(issue.key)
+    # print("==================")
+
     #sort => build main ticket first
     issueList = sorted(issueList, key=lambda issue: issue.fields.issuetype.subtask)
 
@@ -29,7 +31,7 @@ def createNotionTaskFromJira():
 
     # check is ticket exist in notion
     for issue in issueList:
-        if issue.key == "EER-869":
+        if issue.key == "EER-1023":
             print("aa")
         # only create subtask or task without subtask
         if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
@@ -96,10 +98,13 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename='E:/tmp/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
-        logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
-        createNotionTaskFromJira()
-        updateNotionTicketStatus()
-        logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        try:
+            logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+            createNotionTaskFromJira()
+            updateNotionTicketStatus()
+            logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
+        except Exception as e:
+            logging.info("autoSyncJiraToNotion execute fail, exception[{}]", e)
         time.sleep(1800)
 
     # NotionUtil.deleteOutOfDateTask()
