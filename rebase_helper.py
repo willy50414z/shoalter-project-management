@@ -44,7 +44,7 @@ def check_and_resolve_conflicts():
             # Accept 'theirs' changes
             # repo.git.checkout('--theirs', file_path)
             repo.git.execute(['git', 'checkout', conflict_resolve_strategy, file_path])
-            print(f'resolve {file_path} by ours')
+            print(f'resolve {file_path} by {conflict_resolve_strategy}')
             # repo.index.add([file_path])
         else:
             manual_file.append(file_path)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
                 # If all conflicts resolved, run rebase --continue again
                 repo.git.add(A=True)
                 if repo.is_dirty():
-                    repo.git.commit('-m', 'Resolved all conflicts and accepted ours changes, '
+                    repo.git.commit('-m', f'Resolved all conflicts and accepted {conflict_resolve_strategy} changes, '
                                     f'origin commit_sha[{get_commit_sha()}]origin commit_message[{get_commit_message()}]')
                 else:
                     print('ready for continue rebase')
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                 repo.git.add(A=True)
                 if repo.is_dirty():
                     repo.git.commit('-m',
-                                    f'Resolved all conflicts and accepted ours changes and manual resolve, '
+                                    f'Resolved all conflicts and accepted {conflict_resolve_strategy} changes and manual resolve, '
                                     f'origin commit_sha[{get_commit_sha()}]origin commit_message[{get_commit_message()}]')
                 else:
                     print('ready for continue rebase')
