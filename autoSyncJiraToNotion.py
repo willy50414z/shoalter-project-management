@@ -31,11 +31,11 @@ def createNotionTaskFromJira():
 
     # check is ticket exist in notion
     for issue in issueList:
-        if issue.key == "EER-1023":
+        if issue.key == "EER-1134":
             print("aa")
         # only create subtask or task without subtask
         if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
-            notionItemList = NotionUtil. findByTicket(
+            notionItemList = NotionUtil.findByTicket(
                 NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.task_database_id,
                 NotionUtil.jira_url_prefix + issue.key)
             if 0 == len(notionItemList):
@@ -43,10 +43,23 @@ def createNotionTaskFromJira():
                 if issue.fields.issuetype.subtask:
                     NotionUtil.createSubTask(issue)
                 else:
-                    NotionUtil.createTask(issue)
+                    NotionUtil.createTask(NotionUtil.task_database_id, issue)
                     # 有subtask的task就不需要建subtasks
                     if len(issue.fields.subtasks) == 0:
                         NotionUtil.createSubTask(issue)
+
+def createEcomEngineTaskFromJira():
+    issueList = JiraUtil.getEERIncompletedTask()
+    for issue in issueList:
+        if issue.key == "EER-1134":
+            print("aa")
+        # only create subtask or task without subtask
+        if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
+            notionItemList = NotionUtil.findByTicket(
+                NotionUtil.ecom_engine_database_id,
+                NotionUtil.jira_url_prefix + issue.key)
+            if notionItemList is None or 0 == len(notionItemList):
+                NotionUtil.createTask(NotionUtil.ecom_engine_database_id, issue)
 
 def updateNotionTicketStatus():
     itemList = NotionUtil.findOpenedItem(NotionUtil.task_database_id)
@@ -93,7 +106,7 @@ if __name__ == '__main__':
     # updateNotionTicketStatus()
     # print(JiraUtil.findIssueByKey("BUILD-4504").fields.description)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
-    # print(NotionUtil.findByTicketLike("742"))
+    # print(NotionUtil.findByTicketLike("1134"))
     # updateNotionTicketStatus()
 
     logging.basicConfig(filename='E:/tmp/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -13,11 +13,11 @@ jira = JIRA(options=jiraOptions, basic_auth=(
 def getIncompletedTask():
     # assemble filter
     assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
-                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen']
+                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh']
     assignee_query = ', '.join([f'"{assignee}"' for assignee in assignees])
 
     devPICs = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
-               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen']
+               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh']
     devPIC_query = ', '.join([f'"{devPIC}"' for devPIC in devPICs])
 
     statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
@@ -27,6 +27,33 @@ def getIncompletedTask():
     issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
 
     jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query})) OR issuetype in ("Sub-task"))'
+
+    # jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query}))'
+
+    # fetch data
+    startIdx = 0
+    fetch_size = 100
+
+    issues = jira.search_issues(jql_str=jql_query, maxResults=fetch_size)
+    totalSize = issues.total
+    allIssues = issues.iterable
+    startIdx += fetch_size
+    while startIdx < totalSize:
+        issues = jira.search_issues(jql_str=jql_query, startAt=startIdx,
+                                    maxResults=min(fetch_size, totalSize - startIdx))
+        allIssues.extend(issues.iterable)
+        startIdx += fetch_size
+    return allIssues
+
+def getEERIncompletedTask():
+
+    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
+    status_query = ', '.join([f'"{status}"' for status in statuses])
+
+    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement']
+    issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
+
+    jql_query = f'Project="EER" AND (status not in ({status_query}) AND issuetype in ({issueType_query}))'
 
     # jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query}))'
 

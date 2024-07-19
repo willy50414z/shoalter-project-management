@@ -1,7 +1,8 @@
 import sys
 import time
 import json
-from util import NotionUtil, GitlabUtil, JiraUtil, GitUtil
+from util import NotionUtil, GitlabUtil, JiraUtil
+from service.git_svc import GitService
 
 system_base_info = {
     "address-service": {"project_id": 975,
@@ -91,28 +92,28 @@ def get_release_notion_info(release_date):
     not_complete_sys = []
     for notionItem in releaseNotionItemList:
         sysCode = notionItem["properties"]["System"]["select"]["name"]
-        if notionItem["properties"]["BuildTicket"]["url"]:
-            if notionItem["properties"]["BuildTicket"]["url"].startswith(NotionUtil.jira_url_prefix):
-                continue
+        if sysCode != 'HYBRIS':
+            if notionItem["properties"]["BuildTicket"]["url"]:
+                if notionItem["properties"]["BuildTicket"]["url"].startswith(NotionUtil.jira_url_prefix):
+                    continue
+                else:
+                    notionItemInfo[sysCode] = json.loads(notionItem["properties"]["BuildTicket"]["url"])
             else:
-                notionItemInfo[sysCode] = json.loads(notionItem["properties"]["BuildTicket"]["url"])
-        else:
-            completeRatio = notionItem["properties"]["CompleteRatio"]["rollup"]["number"]
-            ticketLink = notionItem["properties"]["Ticket"]["url"]
-            fixVersion = notionItem["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
+                completeRatio = notionItem["properties"]["CompleteRatio"]["rollup"]["number"]
+                ticketLink = notionItem["properties"]["Ticket"]["url"]
 
-            if completeRatio < 1 or sysCode in not_complete_sys:
-                not_complete_sys.append(sysCode)
-                notionItemInfo[sysCode] = None
-                print("task is not completed, sysCode[" + sysCode + "]ticketLink[" + ticketLink + "]")
-                continue
-            if sysCode not in notionItemInfo:
-                notionItemInfo[sysCode] = {"stage_id": stage_id}
-                notionItemInfo[sysCode]["tickets"] = []
-                notionItemInfo[sysCode]["notion_pages_id"] = []
-            notionItemInfo[sysCode]["tickets"].append(ticketLink)
-            notionItemInfo[sysCode]["release_date"] = notionItem["properties"]["ReleaseDate"]["select"]["name"]
-            notionItemInfo[sysCode]["notion_pages_id"].append(notionItem["id"])
+                if completeRatio < 1 or sysCode in not_complete_sys:
+                    not_complete_sys.append(sysCode)
+                    notionItemInfo[sysCode] = None
+                    print("task is not completed, sysCode[" + sysCode + "]ticketLink[" + ticketLink + "]")
+                    continue
+                if sysCode not in notionItemInfo:
+                    notionItemInfo[sysCode] = {"stage_id": stage_id}
+                    notionItemInfo[sysCode]["tickets"] = []
+                    notionItemInfo[sysCode]["notion_pages_id"] = []
+                notionItemInfo[sysCode]["tickets"].append(ticketLink)
+                notionItemInfo[sysCode]["release_date"] = notionItem["properties"]["ReleaseDate"]["select"]["name"]
+                notionItemInfo[sysCode]["notion_pages_id"].append(notionItem["id"])
     return notionItemInfo
 
 
@@ -337,7 +338,7 @@ def merge_release_to_main(notion_info):
             continue
         try:
             print(f"merge branch to main, sys_code[{sys_code}] from branch[{notion_info[sys_code]["release_branch"]}]")
-            GitUtil.merge_and_push(system_base_info[sys_code]["repo_path"], notion_info[sys_code]["release_branch"],
+            GitService(system_base_info[sys_code]["repo_path"]).merge_and_push(notion_info[sys_code]["release_branch"],
                                    "main")
         except Exception as e:
             update_process(sys_code, notion_info, e)

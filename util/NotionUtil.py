@@ -8,6 +8,7 @@ from dto.NotionTaskDto import NotionTaskDto
 task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
 subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
 release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
+ecom_engine_database_id = 'd4796c9dac794c7883283224db08b63c'
 
 config = configparser.ConfigParser()
 config.read('application.ini')
@@ -21,6 +22,7 @@ peopleIdMap = {
     , 'TW - IT - BE - Willy Cheng': '9ec132c2-2c35-4d72-a587-e567036b717e'
     , 'TW - IT - BE - Ainsley Wang': '496f4dd0-d2fa-4550-bc6c-1c661fe91c10'
     , 'TW - IT - BE - Shelby Cheng': 'a3458ee5-b64c-46f4-8264-f6aea1a08a45'
+    , 'TW - IT - BE - Ethan Hsieh': '4ec6e82f-4927-412f-ab09-18e9f2fa5917'
 }
 
 headers = {
@@ -95,6 +97,8 @@ def findByTicket(database_id, issueKey):
             if len(data["results"]) == 0:
                 print("notion item not found, databaseId[" + database_id + "]issueKey[" + issueKey + "]")
             return data["results"]
+        elif "status" in data and data["status"] == 404:
+            return None
         else:
             raise ValueError("[findByTicketLike] fetch notion data by issue key failed, issueKey[" + issueKey + "]")
     except Exception as e:
@@ -191,10 +195,36 @@ def createPage(subTaskKey, title, taskKey, assigneeName):
     print(response.json())
 
 
-def createTask(issue):
+def createTask(db_id, issue):
     print(f'start create task, issue.key[{issue.key}]')
+
+    system_name = None
+    assignee = None
+    if "[cart-service]" in issue.fields.summary:
+        system_name = "cart-service"
+    elif "[address-service]" in issue.fields.summary:
+        system_name = "address-service"
+    elif "[order-service]" in issue.fields.summary:
+        system_name = "order-service"
+    elif "[IIDS]" in issue.fields.summary:
+        system_name = "IIDS"
+    elif "[IIMS-LM]" in issue.fields.summary:
+        system_name = "IIMS-LM"
+    elif "[IIMS]" in issue.fields.summary:
+        system_name = "IIMS-HKTV"
+    elif "[promotion-service]" in issue.fields.summary:
+        system_name = "promotion-service"
+    elif "[product-service]" in issue.fields.summary:
+        system_name = "product-service"
+    elif "[notification-service]" in issue.fields.summary:
+        system_name = "notification-service"
+    elif "[config-service]" in issue.fields.summary:
+        system_name = "config-service"
+    elif "[user-service]" in issue.fields.summary:
+        system_name = "user-service"
+
     payload = {
-        "parent": {"type": "database_id", "database_id": task_database_id},
+        "parent": {"type": "database_id", "database_id": db_id},
         "properties": {
             "Name": {
                 "type": "title",
@@ -219,23 +249,15 @@ def createTask(issue):
                 'select': {
                     'name': "uncheck"
                 }
+            },
+            "fixVersion": {
+                'rich_text': [{
+                    'text': {
+                        'content': issue.fields.fixVersions[0].name}
+                }]
             }
         }
     }
-
-    system_name = None
-    if "[cart-service]" in issue.fields.summary:
-        system_name = "cart-service"
-    elif "[address-service]" in issue.fields.summary:
-        system_name = "address-service"
-    elif "[order-service]" in issue.fields.summary:
-        system_name = "order-service"
-    elif "[IIDS]" in issue.fields.summary:
-        system_name = "IIDS"
-    elif "[IIMS-LM]" in issue.fields.summary:
-        system_name = "IIMS-LM"
-    elif "[IIMS]" in issue.fields.summary:
-        system_name = "IIMS-HKTV"
 
     if system_name:
         payload["properties"]["System"] = {
