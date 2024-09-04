@@ -8,10 +8,27 @@ excludeParentKey = ["SI-108", "SI-18"]
 completeTaskStatusList = ["Done", "Cancelled", "Pending UAT", "Launch Ready", "Closed", "已關閉", "完成",
                           "On Hold", "已取消"]
 
+def create_notion_item(issue):
+    if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
+        notionItemList = NotionUtil.findByTicket(
+            NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.ecom_engine_database_id,
+            NotionUtil.jira_url_prefix + issue.key)
+        if 0 == len(notionItemList):
+            # create notion
+            if issue.fields.issuetype.subtask:
+                NotionUtil.createSubTask(issue)
+            else:
+                NotionUtil.create_task(NotionUtil.ecom_engine_database_id, issue)
+                # 有subtask的task就不需要建subtasks
+                subtask = NotionUtil.findByTicket(NotionUtil.subtask_database_id,
+                                                  NotionUtil.jira_url_prefix + issue.key)
+                if len(issue.fields.subtasks) == 0 and 0 == len(subtask):
+                    NotionUtil.createSubTask(issue)
+                    # TODO remove task if subTask db contains Task
 
-def createNotionTaskFromJira():
+def create_team1_task_from_jira():
     # fetch JIRA incomplete ticket
-    issueList = JiraUtil.getIncompletedTask()
+    issueList = JiraUtil.get_team1_incompleted_task()
     # for issue in issueList:
     #     print(issue.key)
     # filt out build and complete ticket
@@ -31,35 +48,17 @@ def createNotionTaskFromJira():
 
     # check is ticket exist in notion
     for issue in issueList:
-        if issue.key == "EER-1134":
+        if issue.key == "EER-1407":
             print("aa")
-        # only create subtask or task without subtask
-        if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
-            notionItemList = NotionUtil.findByTicket(
-                NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.task_database_id,
-                NotionUtil.jira_url_prefix + issue.key)
-            if 0 == len(notionItemList):
-                # create notion
-                if issue.fields.issuetype.subtask:
-                    NotionUtil.createSubTask(issue)
-                else:
-                    NotionUtil.createTask(NotionUtil.task_database_id, issue)
-                    # 有subtask的task就不需要建subtasks
-                    if len(issue.fields.subtasks) == 0:
-                        NotionUtil.createSubTask(issue)
+        create_notion_item(issue)
 
-def createEcomEngineTaskFromJira():
+
+def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
     for issue in issueList:
-        if issue.key == "EER-1134":
+        if issue.key == "EER-1407":
             print("aa")
-        # only create subtask or task without subtask
-        if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
-            notionItemList = NotionUtil.findByTicket(
-                NotionUtil.ecom_engine_database_id,
-                NotionUtil.jira_url_prefix + issue.key)
-            if notionItemList is None or 0 == len(notionItemList):
-                NotionUtil.createTask(NotionUtil.ecom_engine_database_id, issue)
+        create_notion_item(issue)
 
 def updateNotionTicketStatus():
     itemList = NotionUtil.findOpenedItem(NotionUtil.task_database_id)
@@ -78,13 +77,32 @@ def updateNotionTicketStatus():
             issueKey = urlAr[len(urlAr) - 1]
             NotionUtil.updateSubTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
 
+def update_eer_and_team1_ticket_status():
+    itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
+    for item in itemList:
+        if "EER-1407" in str(item["properties"]["Ticket"]):
+            aa = 0
+        if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
+            urlAr = item["properties"]["Ticket"]["url"].split("/")
+            issueKey = urlAr[len(urlAr) - 1]
+            NotionUtil.updateTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
+
+    itemList = NotionUtil.findOpenedItem(NotionUtil.subtask_database_id)
+    for item in itemList:
+        if "EER-816" in str(item["properties"]["Ticket"]):
+            aa = 0
+        if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
+            urlAr = item["properties"]["Ticket"]["url"].split("/")
+            issueKey = urlAr[len(urlAr) - 1]
+            NotionUtil.updateSubTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
+
 
 # create notion item
 
 # update notion status
 
 def printJiraTicket():
-    issueList = JiraUtil.getIncompletedTask()
+    issueList = JiraUtil.get_team1_incompleted_task()
 
     for issue in issueList:
         print(issue.key)
@@ -106,27 +124,18 @@ if __name__ == '__main__':
     # updateNotionTicketStatus()
     # print(JiraUtil.findIssueByKey("BUILD-4504").fields.description)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
-    # print(NotionUtil.findByTicketLike("1134"))
+    # print(NotionUtil.findByTicketLike("xx"))
     # updateNotionTicketStatus()
+    # createEcomEngineTaskFromJira()
 
-    logging.basicConfig(filename='E:/tmp/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
         try:
             logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
-            createNotionTaskFromJira()
-            updateNotionTicketStatus()
+            create_eer_task_from_jira()
+            # create_team1_task_from_jira()
+            # update_eer_and_team1_ticket_status()
             logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
         except Exception as e:
             logging.info("autoSyncJiraToNotion execute fail, exception[{}]", e)
         time.sleep(1800)
-
-    # NotionUtil.deleteOutOfDateTask()
-    # print(NotionUtil.findByTicketLike("2428"))
-
-    # notionItems = NotionUtil.findAllReleases()
-    # for notionItem in notionItems:
-    #     print(notionItem["id"])
-    #     print(notionItem["properties"]["Name"]["title"][0]["text"]["content"])
-    #     print(notionItem["properties"]["Release Date"]["date"]["start"])
-    #     for releaseTicket in notionItem["properties"]["ReleaseTickets"]["multi_select"]:
-    #         print(releaseTicket["name"])

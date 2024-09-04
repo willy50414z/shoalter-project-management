@@ -10,7 +10,7 @@ aa = config["DEFAULT"]["jira_token"]
 jira = JIRA(options=jiraOptions, basic_auth=(
 	"willy.cheng@shoalter.com", config["DEFAULT"]["jira_token"]))
 
-def getIncompletedTask():
+def get_team1_incompleted_task():
     # assemble filter
     assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
                  'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh']
@@ -98,6 +98,24 @@ def create_build_ticket(summary, description, buildDate):
         , "customfield_11599": buildDate + "T05:45:00.000+0800"
         , "customfield_11563": {"accountId": "626b9d12d364ae00680b40a4"}
     }
+    return jira.create_issue(fields)
+
+def update_build_ticket(issue_key, summary, description, buildDate):
+    fields = {
+        "project": {
+            "key": "BUILD"
+        }
+        , "summary": summary
+        , "description": description
+        , "issuetype": {
+            "id": "3"
+        }
+        , "customfield_11200": buildDate
+        , "customfield_11599": buildDate + "T05:45:00.000+0800"
+        , "customfield_11563": {"accountId": "626b9d12d364ae00680b40a4"}
+    }
+    issue = jira.issue(issue_key)
+    issue.update(fields=fields)
     return jira.create_issue(fields)
 
 # get single ticket
