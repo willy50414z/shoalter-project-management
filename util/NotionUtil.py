@@ -30,9 +30,12 @@ peopleIdMap = {
 
 team1_service = ["cart-service", "address-service", "order-service", "IIDS", "IIMS", "IIMS-LM"]
 team2_service = ["promotion-service", "product-service", "config-server", "user-service", "internal-API-gateway",
-                 "mobile-API-gateway", "caching-management-server", "shoalter-server-starter", "frontend-api-gateway", "internal-api-gateway"]
+                 "mobile-API-gateway", "caching-management-server", "shoalter-server-starter", "frontend-api-gateway",
+                 "internal-api-gateway"]
 team3_service = ["notification-service", "page-component-service", "third-party-api-service", "SAC"]
-exclude_service = ["shoalter-ecommerce-frontend", "personalization-service", "see-management-console-backend", "see-management-console-frontend","login-service","game-service", "batch-file-processing-service", "see-management-console-frontend", "see-management-console-backend"]
+exclude_service = ["shoalter-ecommerce-frontend", "personalization-service", "see-management-console-backend",
+                   "see-management-console-frontend", "login-service", "game-service", "batch-file-processing-service",
+                   "see-management-console-frontend", "see-management-console-backend"]
 
 headers = {
     'Authorization': f'Bearer {integration_token}',
@@ -53,20 +56,33 @@ def findAllReleases():
 
 
 def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
-    url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
-    payload = {"page_size": 100, "filter": {"and": [{
-        "property": "ReleaseDate",
-        "select": {
-            "equals": releaseDate
-        }
-    }, {
-        "property": "BuildTicket",
-        "url": {
-            "does_not_equal": "xx"
-        }
+    url = f'https://api.notion.com/v1/databases/{ecom_engine_database_id}/query'
 
-    }
+    sys_criteria = []
+    for sys in team1_service:
+        sys_criteria.append({
+            "property": "System",
+            "select": {
+                "equals": sys
+            }
+        })
+
+    payload = {"page_size": 100, "filter": {"and": [{
+            "property": "ReleaseDate",
+            "select": {
+                "equals": releaseDate
+            }
+        }, {
+            "property": "BuildTicket",
+            "url": {
+                "does_not_equal": "xx"
+            }
+        },
+        {
+            "or": sys_criteria
+        }
     ]}}
+
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
     if "results" in data:
@@ -264,7 +280,7 @@ def get_system_code_and_assignee(issue):
     if "[ThePlace]" in issue.fields.summary:
         system_name = "IIMS-LM"
         assignee = willy_name
-    elif "[HKTV-IIMS]" in issue.fields.summary or "[IIMS-HKTV]" in issue.fields.summary or "[IIMS]" in issue.fields.summary:
+    elif "[HKTV-IIMS]" in issue.fields.summary or "[IIMS-HKTV]" in issue.fields.summary or "[iims]" in issue.fields.summary or "[IIMS]" in issue.fields.summary:
         system_name = "IIMS"
         assignee = willy_name
     elif issue.key.startswith("HYBRIS-"):
@@ -346,9 +362,10 @@ def create_task(db_id, issue):
 
     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
     print(response.json())
+    return response
 
 
-def createSubTask(issue):
+def createSubTask(issue, task_id=None):
     print(f'start create subtask, issue.key[{issue.key}]')
     payload = {
         "parent": {"type": "database_id", "database_id": subtask_database_id},
@@ -377,7 +394,7 @@ def createSubTask(issue):
                 "relation": [
                     {
                         "id":
-                            findByTicket(ecom_engine_database_id,
+                            task_id if task_id else findByTicket(ecom_engine_database_id,
                                          f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")[
                                 0]["id"]
                     }
@@ -442,6 +459,23 @@ def updateTaskStatus(page, issue):
         }
         response = requests.patch(url, json=payload, headers=headers)
         return response.json()
+
+def update_subtask_relate_to_task(page_id, task_id):
+    url = f'https://api.notion.com/v1/pages/{page_id}'
+    payload = {
+        "properties": {
+            "Task": {
+                "type": "relation",
+                "relation": [
+                    {
+                        "id": task_id
+                    }
+                ]
+            }
+        }
+    }
+    response = requests.patch(url, json=payload, headers=headers)
+    return response.json()
 
 
 def update_build_ticket(page_id, issue_key):

@@ -18,13 +18,18 @@ def create_notion_item(issue):
             if issue.fields.issuetype.subtask:
                 NotionUtil.createSubTask(issue)
             else:
-                NotionUtil.create_task(NotionUtil.ecom_engine_database_id, issue)
+                create_task_res = NotionUtil.create_task(NotionUtil.ecom_engine_database_id, issue)
                 # 有subtask的task就不需要建subtasks
                 subtask = NotionUtil.findByTicket(NotionUtil.subtask_database_id,
                                                   NotionUtil.jira_url_prefix + issue.key)
-                if len(issue.fields.subtasks) == 0 and 0 == len(subtask):
-                    NotionUtil.createSubTask(issue)
-                    # TODO remove task if subTask db contains Task
+                try:
+                    if len(issue.fields.subtasks) == 0 and 0 == len(subtask):
+                        NotionUtil.createSubTask(issue, create_task_res.json()["id"])
+                    elif "Task" not in subtask:
+                        NotionUtil.update_subtask_relate_to_task(subtask[0]["id"], create_task_res.json()["id"])
+                        # TODO remove task if subTask db contains Task
+                except Exception as e:
+                    raise Exception(f"create task fail, create_task_res[{create_task_res}]subtask[{subtask}]errorMsg[{e}]")
 
 def create_team1_task_from_jira():
     # fetch JIRA incomplete ticket
@@ -48,7 +53,7 @@ def create_team1_task_from_jira():
 
     # check is ticket exist in notion
     for issue in issueList:
-        if issue.key == "EER-1407":
+        if issue.key == "EER-1462":
             print("aa")
         create_notion_item(issue)
 
@@ -56,7 +61,7 @@ def create_team1_task_from_jira():
 def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
     for issue in issueList:
-        if issue.key == "EER-1407":
+        if issue.key == "EER-1331":
             print("aa")
         create_notion_item(issue)
 
@@ -80,7 +85,7 @@ def updateNotionTicketStatus():
 def update_eer_and_team1_ticket_status():
     itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
     for item in itemList:
-        if "EER-1407" in str(item["properties"]["Ticket"]):
+        if "MS-1462" in str(item["properties"]["Ticket"]):
             aa = 0
         if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
             urlAr = item["properties"]["Ticket"]["url"].split("/")
@@ -133,8 +138,8 @@ if __name__ == '__main__':
         try:
             logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
             create_eer_task_from_jira()
-            # create_team1_task_from_jira()
-            # update_eer_and_team1_ticket_status()
+            create_team1_task_from_jira()
+            update_eer_and_team1_ticket_status()
             logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
         except Exception as e:
             logging.info("autoSyncJiraToNotion execute fail, exception[{}]", e)

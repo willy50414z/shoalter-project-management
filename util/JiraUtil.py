@@ -118,6 +118,9 @@ def update_build_ticket(issue_key, summary, description, buildDate):
     issue.update(fields=fields)
     return jira.create_issue(fields)
 
+def test():
+    return jira.get_project_version_by_name(version_name="EER@2024-09-09", project="EER")
+
 # get single ticket
 # singleIssue = jira.issue('SI-18')
 # print('{}: {}:{}'.format(singleIssue.key,
