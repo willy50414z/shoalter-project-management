@@ -13,11 +13,11 @@ jira = JIRA(options=jiraOptions, basic_auth=(
 def get_team1_incompleted_task():
     # assemble filter
     assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
-                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh']
+                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh', 'TW - IT - BE - Kenny Ma']
     assignee_query = ', '.join([f'"{assignee}"' for assignee in assignees])
 
     devPICs = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Shelby Cheng', 'TW - IT - BE - Ainsley Wang',
-               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh']
+               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh', 'TW - IT - BE - Kenny Ma']
     devPIC_query = ', '.join([f'"{devPIC}"' for devPIC in devPICs])
 
     statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']

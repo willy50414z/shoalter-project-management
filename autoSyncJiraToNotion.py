@@ -13,6 +13,8 @@ def create_notion_item(issue):
         notionItemList = NotionUtil.findByTicket(
             NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.ecom_engine_database_id,
             NotionUtil.jira_url_prefix + issue.key)
+        if "MS-3742" == issue.key:
+            aa = 0
         if 0 == len(notionItemList):
             # create notion
             if issue.fields.issuetype.subtask:
@@ -25,7 +27,7 @@ def create_notion_item(issue):
                 try:
                     if len(issue.fields.subtasks) == 0 and 0 == len(subtask):
                         NotionUtil.createSubTask(issue, create_task_res.json()["id"])
-                    elif "Task" not in subtask:
+                    elif "Task" not in subtask and len(subtask) > 0:
                         NotionUtil.update_subtask_relate_to_task(subtask[0]["id"], create_task_res.json()["id"])
                         # TODO remove task if subTask db contains Task
                 except Exception as e:
@@ -63,7 +65,11 @@ def create_eer_task_from_jira():
     for issue in issueList:
         if issue.key == "EER-1331":
             print("aa")
-        create_notion_item(issue)
+        system_name, assignee = NotionUtil.get_system_code_and_assignee(issue)
+        if assignee is None:
+            print(f"skip create [{issue.key}] because its exclude service")
+        else:
+            create_notion_item(issue)
 
 def updateNotionTicketStatus():
     itemList = NotionUtil.findOpenedItem(NotionUtil.task_database_id)
@@ -129,18 +135,22 @@ if __name__ == '__main__':
     # updateNotionTicketStatus()
     # print(JiraUtil.findIssueByKey("BUILD-4504").fields.description)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
-    # print(NotionUtil.findByTicketLike("xx"))
+    print(NotionUtil.findByTicketLike("5466")[0])
     # updateNotionTicketStatus()
     # createEcomEngineTaskFromJira()
 
-    logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    while 1 == 1:
-        try:
-            logging.info("start sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
-            create_eer_task_from_jira()
-            create_team1_task_from_jira()
-            update_eer_and_team1_ticket_status()
-            logging.info("end sync Jira ticket, " + datetime.now().strftime("%Y%m%d %H:%M:%S.%f"))
-        except Exception as e:
-            logging.info("autoSyncJiraToNotion execute fail, exception[{}]", e)
-        time.sleep(1800)
+    # logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    # while 1 == 1:
+    #     try:
+    #         now = datetime.now()
+    #         if 6 < now.hour < 20:
+    #             logging.info("start sync Jira ticket, " + now.strftime("%Y%m%d %H:%M:%S.%f"))
+    #             create_eer_task_from_jira()
+    #             create_team1_task_from_jira()
+    #             update_eer_and_team1_ticket_status()
+    #             logging.info("end sync Jira ticket, " + now.strftime("%Y%m%d %H:%M:%S.%f"))
+    #         else:
+    #             time.sleep(3600)
+    #     except Exception as e:
+    #         logging.info("autoSyncJiraToNotion execute fail, exception[{}]", e)
+    #     time.sleep(1800)

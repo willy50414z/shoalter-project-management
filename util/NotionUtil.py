@@ -24,6 +24,7 @@ peopleIdMap = {
     , 'TW - IT - BE - Ainsley Wang': '496f4dd0-d2fa-4550-bc6c-1c661fe91c10'
     , 'TW - IT - BE - Shelby Cheng': 'a3458ee5-b64c-46f4-8264-f6aea1a08a45'
     , 'TW - IT - BE - Ethan Hsieh': '4ec6e82f-4927-412f-ab09-18e9f2fa5917'
+    , 'TW - IT - BE - Kenny Ma': '113d872b-594c-81b9-9659-0002d54432ff'
     , 'TW - IT - BE - Wade Wu': '56a2f9ae-a1f5-4021-804a-6c25c4b1b8a0'
     , 'TW-IT-BE-Lovius Tey': 'aa923001-32ea-44fe-921b-b6c67454b7fb'
 }
@@ -367,6 +368,10 @@ def create_task(db_id, issue):
 
 def createSubTask(issue, task_id=None):
     print(f'start create subtask, issue.key[{issue.key}]')
+    parent_task = findByTicket(ecom_engine_database_id,
+                 f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")
+    if len(parent_task)==0:
+        return
     payload = {
         "parent": {"type": "database_id", "database_id": subtask_database_id},
         "properties": {
@@ -394,8 +399,7 @@ def createSubTask(issue, task_id=None):
                 "relation": [
                     {
                         "id":
-                            task_id if task_id else findByTicket(ecom_engine_database_id,
-                                         f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")[
+                            task_id if task_id else parent_task[
                                 0]["id"]
                     }
                 ]
