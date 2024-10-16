@@ -268,11 +268,11 @@ def get_system_code_and_assignee(issue):
 
     for service_name in team2_service:
         if "[" + service_name + "]" in issue.fields.summary:
-            return service_name, wade_name
+            return service_name, None
 
     for service_name in team3_service:
         if "[" + service_name + "]" in issue.fields.summary:
-            return service_name, lovious_name
+            return service_name, None
 
     for service_name in exclude_service:
         if "[" + service_name + "]" in issue.fields.summary:
