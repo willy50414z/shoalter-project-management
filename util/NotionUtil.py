@@ -69,16 +69,16 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
         })
 
     payload = {"page_size": 100, "filter": {"and": [{
-            "property": "ReleaseDate",
-            "select": {
-                "equals": releaseDate
-            }
-        }, {
-            "property": "BuildTicket",
-            "url": {
-                "does_not_equal": "xx"
-            }
-        },
+        "property": "ReleaseDate",
+        "select": {
+            "equals": releaseDate
+        }
+    }, {
+        "property": "BuildTicket",
+        "url": {
+            "does_not_equal": "xx"
+        }
+    },
         {
             "or": sys_criteria
         }
@@ -260,7 +260,7 @@ def get_system_code_and_assignee(issue):
     lovious_name = 'TW-IT-BE-Lovius Tey'
 
     system_name = None
-    assignee = None
+    assignee = willy_name
 
     for service_name in team1_service:
         if "[" + service_name + "]" in issue.fields.summary:
@@ -369,8 +369,8 @@ def create_task(db_id, issue):
 def createSubTask(issue, task_id=None):
     print(f'start create subtask, issue.key[{issue.key}]')
     parent_task = findByTicket(ecom_engine_database_id,
-                 f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")
-    if len(parent_task)==0:
+                               f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")
+    if len(parent_task) == 0:
         return
     payload = {
         "parent": {"type": "database_id", "database_id": subtask_database_id},
@@ -431,6 +431,7 @@ def updateTaskStatus(page, issue):
             fix_versions += fix_version.name + ","
             if "@" in fix_version.name:
                 release_date = fix_version.name.split("@")[1]
+                break
         if len(fix_versions) > 0:
             fix_versions = fix_versions[0:len(fix_versions) - 1]
 
@@ -463,6 +464,7 @@ def updateTaskStatus(page, issue):
         }
         response = requests.patch(url, json=payload, headers=headers)
         return response.json()
+
 
 def update_subtask_relate_to_task(page_id, task_id):
     url = f'https://api.notion.com/v1/pages/{page_id}'
