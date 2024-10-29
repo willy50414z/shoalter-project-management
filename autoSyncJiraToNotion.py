@@ -117,6 +117,9 @@ def create_team1_task_from_jira():
     for issue in issueList:
         if issue.key == "EER-1462":
             print("aa")
+        if issue.key in excluded_sub_task:
+            print(f"{issue.key} is exclude for save block")
+            continue
         create_notion_item(issue)
 
 
@@ -125,6 +128,9 @@ def create_eer_task_from_jira():
     for issue in issueList:
         if issue.key == "EER-1331":
             print("aa")
+        if issue.key in excluded_sub_task:
+            print(f"{issue.key} is exclude for save block")
+            continue
         system_name, assignee = NotionUtil.get_system_code_and_assignee(issue)
         if assignee is None:
             print(f"skip create [{issue.key}] because its exclude service")
