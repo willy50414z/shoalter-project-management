@@ -6,10 +6,9 @@ from datetime import datetime, timedelta
 from dto.NotionTaskDto import NotionTaskDto
 from util import string_util
 
-task_database_id = 'b2bc16e47be74cc68bd90b6d1bf8a5b8'  # Replace with your database ID
-subtask_database_id = '39c41b1fa9a9464fb197e088349c5861'  # Replace with your database ID
-release_database_id = '4125f6f2e3f3425d9ebdcc0c4e493069'  # Replace with your database ID
-ecom_engine_database_id = 'd4796c9dac794c7883283224db08b63c'
+ecom_engine_database_id = '12d43989266a8035886be967a4427bc4'
+subtask_database_id = '12d43989266a80a7b970e3749d33540a'  # Replace with your database ID
+
 
 config = configparser.ConfigParser()
 config.read('application.ini')
@@ -33,7 +32,7 @@ team1_service = ["cart-service", "address-service", "order-service", "IIDS", "II
 team2_service = ["promotion-service", "product-service", "config-server", "user-service", "internal-API-gateway",
                  "mobile-API-gateway", "caching-management-server", "shoalter-server-starter", "frontend-api-gateway",
                  "internal-api-gateway"]
-team3_service = ["notification-service", "page-component-service", "third-party-api-service", "SAC"]
+team3_service = ["notification-service", "page-component-service","third-party-API-service", "third-party-api-service", "SAC"]
 exclude_service = ["shoalter-ecommerce-frontend", "personalization-service", "see-management-console-backend",
                    "see-management-console-frontend", "login-service", "game-service", "batch-file-processing-service",
                    "see-management-console-frontend", "see-management-console-backend"]
@@ -45,15 +44,6 @@ headers = {
 }
 
 
-def findAllReleases():
-    url = f'https://api.notion.com/v1/databases/{release_database_id}/query'
-    payload = {"page_size": 100}
-    response = requests.post(url, json=payload, headers=headers)
-    data = response.json()
-    if "results" in data:
-        return data["results"]
-    else:
-        raise ValueError("[findAllReleases] fetch notion data by issue key failed")
 
 
 def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
@@ -95,7 +85,7 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
 
 
 def findByTicketLike(issueKey):
-    url = f'https://api.notion.com/v1/databases/{ecom_engine_database_id}/query'
+    url = f'https://api.notion.com/v1/databases/{subtask_database_id}/query'
     payload = {"page_size": 100, "filter": {
         "property": "Ticket",
         "rich_text": {
@@ -198,60 +188,60 @@ def findOpenedItem(database_id):
     return all_result
 
 
-def deleteOutOfDateTask():
-    url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
-    three_months_ago = datetime.now() - timedelta(days=90)
+# def deleteOutOfDateTask():
+#     url = f'https://api.notion.com/v1/databases/{task_database_id}/query'
+#     three_months_ago = datetime.now() - timedelta(days=90)
+#
+#     payload = {"page_size": 100, "filter": {
+#         "property": "Last edited time",
+#         "date": {"before": three_months_ago.isoformat()}
+#     }
+#                }
+#
+#     response = requests.post(url, json=payload, headers=headers)
+#     data = response.json()
+#     outOfDateTask = [task for task in data["results"] if task["properties"]["Status"]["status"]["name"] == "Done"]
+#     print("Prepared to delete " + str(len(outOfDateTask)) + " blocks")
+#     for task in outOfDateTask:
+#         print("Delete block ID[" + task["id"] + "]Name[" + task["properties"]["Name"]["title"][0]["plain_text"] + "]")
+#         response = requests.delete("https://api.notion.com/v1/blocks/" + task["id"], headers=headers)
+#
 
-    payload = {"page_size": 100, "filter": {
-        "property": "Last edited time",
-        "date": {"before": three_months_ago.isoformat()}
-    }
-               }
-
-    response = requests.post(url, json=payload, headers=headers)
-    data = response.json()
-    outOfDateTask = [task for task in data["results"] if task["properties"]["Status"]["status"]["name"] == "Done"]
-    print("Prepared to delete " + str(len(outOfDateTask)) + " blocks")
-    for task in outOfDateTask:
-        print("Delete block ID[" + task["id"] + "]Name[" + task["properties"]["Name"]["title"][0]["plain_text"] + "]")
-        response = requests.delete("https://api.notion.com/v1/blocks/" + task["id"], headers=headers)
-
-
-def createPage(subTaskKey, title, taskKey, assigneeName):
-    # assignee
-    notionPeopleId = '9ec132c2-2c35-4d72-a587-e567036b717e'
-    if assigneeName in peopleIdMap:
-        notionPeopleId = peopleIdMap[assigneeName]
-
-    payload = {
-        "parent": {"type": "database_id", "database_id": task_database_id},
-        "properties": {
-            "Name": {
-                "type": "title",
-                "title": [{"type": "text", "text": {"content": f"[{subTaskKey}] {title}"}}]
-            },
-            "ReleaseDate": {
-                "type": "select",
-                'select': {
-                    'name': 'uncheck',
-                    'color': 'brown'
-                }
-            },
-            "Ticket": {
-                'type': 'url',
-                'url': f'{jira_url_prefix}{subTaskKey}'
-            },
-            "ParentTicket": {
-                'type': 'url',
-                'url': f'{jira_url_prefix}{taskKey}'
-            },
-            'Assignee': {
-                'type': 'people',
-                'people': [{'object': 'user', 'id': notionPeopleId}]}
-        }
-    }
-    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
-    print(response.json())
+# def createPage(subTaskKey, title, taskKey, assigneeName):
+#     # assignee
+#     notionPeopleId = '9ec132c2-2c35-4d72-a587-e567036b717e'
+#     if assigneeName in peopleIdMap:
+#         notionPeopleId = peopleIdMap[assigneeName]
+#
+#     payload = {
+#         "parent": {"type": "database_id", "database_id": task_database_id},
+#         "properties": {
+#             "Name": {
+#                 "type": "title",
+#                 "title": [{"type": "text", "text": {"content": f"[{subTaskKey}] {title}"}}]
+#             },
+#             "ReleaseDate": {
+#                 "type": "select",
+#                 'select': {
+#                     'name': 'uncheck',
+#                     'color': 'brown'
+#                 }
+#             },
+#             "Ticket": {
+#                 'type': 'url',
+#                 'url': f'{jira_url_prefix}{subTaskKey}'
+#             },
+#             "ParentTicket": {
+#                 'type': 'url',
+#                 'url': f'{jira_url_prefix}{taskKey}'
+#             },
+#             'Assignee': {
+#                 'type': 'people',
+#                 'people': [{'object': 'user', 'id': notionPeopleId}]}
+#         }
+#     }
+#     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
+#     print(response.json())
 
 
 def get_system_code_and_assignee(issue):
