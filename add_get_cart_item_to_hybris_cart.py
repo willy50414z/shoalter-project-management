@@ -35,38 +35,3 @@ if __name__ == '__main__':
                           headers={"Authorization": f"Bearer {access_token}"})
             print(entry["sku"] + " - " + str(entry["qty"]) + " - " + str(res))
             aa = 0
-
-#
-#
-# def find_method_by_line_number(file_path, line_number):
-#     with open(file_path, 'r', encoding='utf-8') as file:
-#         java_code = file.read()
-#     tree = javalang.parse.parse(java_code)
-#
-#     return _find_method_by_line_number(tree, line_number)
-#
-#
-# def _find_method_by_line_number(node, line_number):
-#     if node is None:
-#         return None
-#     if isinstance(node, MethodDeclaration):
-#         if line_number < node.position[0]:
-#             return True
-#     if isinstance(node, ClassDeclaration) or isinstance(node, CompilationUnit):
-#         for child_node in node.children:
-#             result = _find_method_by_line_number(child_node, line_number)
-#             if result:
-#                 return result
-#     elif isinstance(node, list):
-#         lasNode = None
-#         for child_node in node:
-#             result = _find_method_by_line_number(child_node, line_number)
-#             if result and isinstance(result, bool):
-#                 return lasNode
-#             elif result:
-#                 return result
-#             else:
-#                 lasNode = child_node
-#     return None
-#
-#
