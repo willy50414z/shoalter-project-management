@@ -139,7 +139,7 @@ class SyncHybrisDiffToRevampService():
     def build_related_file_list(self, branch_change_summary):
         related_service_set = {""}
         for file_path in branch_change_summary.keys():
-            related_service_set.add(file_path)
+            related_service_set.add(file_path[0:file_path.rfind(":")])
 
         related_service_list = []
         for related_service in related_service_set:
