@@ -63,7 +63,7 @@ class SyncHybrisDiffToRevampService():
         change_list = []
         for key, value in commit_diff.items():
             if "sha" != key and "parent_sha" != key and key.endswith(".java") and not key.endswith(
-                    "/ThirdPartyLoginPageController.java"):
+                    "/EcomRevampServiceMigration.java"):
                 file_path = repo_dir + "/" + key
                 # change to parent sha
                 self.git_svc.reset(commit_diff["parent_sha"])
