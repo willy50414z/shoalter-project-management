@@ -16,7 +16,7 @@ class SyncHybrisDiffToRevampService():
         for commit in commits:
             if end_commit_sha == commit.hexsha:
                 return diff_info
-            else:
+            elif branch_name.replace("feature/", "") in commit.message and "Merge branch" not in commit.message:
                 commit_diff_info = {"sha": commit.hexsha, "parent_sha": commit.parents[0].hexsha,
                                     "committed_date": commit.committed_date, "commit_msg": commit.message}
                 commit_diff_info.update(self.git_svc.get_commit_diff(commit))
