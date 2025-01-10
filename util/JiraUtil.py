@@ -23,7 +23,7 @@ def get_team1_incompleted_task():
     statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
     status_query = ', '.join([f'"{status}"' for status in statuses])
 
-    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement']
+    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', 'QA Defect']
     issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
 
     jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query})) OR issuetype in ("Sub-task"))'
@@ -50,7 +50,7 @@ def getEERIncompletedTask():
     statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
     status_query = ', '.join([f'"{status}"' for status in statuses])
 
-    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement']
+    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', 'QA Defect']
     issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
 
     jql_query = f'Project="EER" AND (status not in ({status_query}) AND issuetype in ({issueType_query}))'

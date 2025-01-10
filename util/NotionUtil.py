@@ -63,6 +63,11 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
         "select": {
             "equals": releaseDate
         }
+    },{
+        "property": "JiraStatus",
+        "select": {
+            "does_not_equal": "已取消"
+        }
     }, {
         "property": "BuildTicket",
         "url": {
@@ -258,7 +263,7 @@ def get_system_code_and_assignee(issue):
 
     for service_name in team2_service:
         if "[" + service_name + "]" in issue.fields.summary:
-            return service_name, None
+            return service_name, willy_name
 
     for service_name in team3_service:
         if "[" + service_name + "]" in issue.fields.summary:
@@ -394,6 +399,25 @@ def createSubTask(issue, task_id=None):
                     }
                 ]
             }
+        }
+    }
+
+    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
+    print(response.json())
+
+def createTodoTask():
+    payload = {
+        "parent": {"type": "database_id", "database_id": subtask_database_id},
+        "properties": {
+            "Name": {
+                "type": "title",
+                "title": [{"type": "text", "text": {"content": f"TODO"}}]
+            },
+            'Assignee': {
+                'type': 'people',
+                'people': [{'object': 'user', 'id': peopleIdMap['TW - IT - BE - Willy Cheng']}]
+            },
+            "Status": {"status": {"name": "New"}}
         }
     }
 

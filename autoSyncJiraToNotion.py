@@ -126,7 +126,7 @@ def create_team1_task_from_jira():
 def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
     for issue in issueList:
-        if issue.key == "EER-1331":
+        if issue.key == "EER-1940":
             print("aa")
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
@@ -202,11 +202,15 @@ def printJiraTicket():
 if __name__ == '__main__':
     # printJiraTicket()
     # updateNotionTicketStatus()
-    # print(JiraUtil.findIssueByKey("BUILD-4504").fields.description)
+    # print(JiraUtil.findIssueByKey("EER-1940").fields)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
     # print(NotionUtil.findByTicketLike("123")[0])
     # updateNotionTicketStatus()
     # createEcomEngineTaskFromJira()
+
+    # for i in range(1,50,1):
+    #     NotionUtil.createTodoTask()
+    #     time.sleep(10)
 
     logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')

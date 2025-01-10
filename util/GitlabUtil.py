@@ -1,4 +1,5 @@
 import configparser
+import urllib
 
 import requests
 from datetime import datetime
@@ -9,6 +10,8 @@ headers = {
     'PRIVATE-TOKEN': config["DEFAULT"]["gitlab_token"]
 }
 noDeleteBranchs = ["dev", "main", "staging"]
+
+domain="https://ite-git01.hktv.com.hk"
 
 projectMap = {
     "IIDS": 531
@@ -23,28 +26,35 @@ def getProjectId(projectCode):
         raise KeyError(f"projectCode[{projectCode}] not found in projectMap")
     return projectMap[projectCode]
 
+def get_branch(project_id, branch_name):
+    return requests.get(f"{domain}/api/v4/projects/{project_id}/repository/branches/{urllib.parse.quote_plus(branch_name)}",
+                             headers=headers)
 
 def getBranches(projectId):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/repository/branches",
+    response = requests.get(f"{domain}/api/v4/projects/{projectId}/repository/branches",
                             headers=headers)
     return response.json()
 
 
 def createBranches(projectId, fromBranch, toBranch):
     response = requests.post(
-        f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/repository/branches?branch={toBranch}&ref={fromBranch}",
+        f"{domain}/api/v4/projects/{projectId}/repository/branches?branch={toBranch}&ref={fromBranch}",
         headers=headers)
     return response.json()
 
 
 def delete_branch(project_id, branch_name):
     response = requests.delete(
-        f"https://ite-git01.hktv.com.hk/api/v4/projects/{project_id}/repository/branches/{branch_name.replace("/", "%2F")}", headers=headers)
+        f"{domain}/api/v4/projects/{project_id}/repository/branches/{branch_name.replace("/", "%2F")}", headers=headers)
     return response
 
+def get_cicd_variable(project_id, var_name):
+    response = requests.delete(
+        f"{domain}/api/v4/projects/{project_id}/variables/{var_name}", headers=headers)
+    return response
 
 def getMergeRequestByStatus(status):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/merge_requests?state={status}", headers=headers)
+    response = requests.get(f"{domain}/api/v4/merge_requests?state={status}", headers=headers)
     return response.json()
 
 
@@ -55,48 +65,53 @@ def createMergeRequest(projectId, frombranch, toBranch, title, description):
         "title": title,
         "description": description,
     }
-    response = requests.post(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/merge_requests",
+    response = requests.post(f"{domain}/api/v4/projects/{projectId}/merge_requests",
                              json=merge_request_data, headers=headers)
     return response.json()
 
 
 def getMergeRequest(projectId, iid):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/merge_requests/{iid}",
+    response = requests.get(f"{domain}/api/v4/projects/{projectId}/merge_requests/{iid}",
                             headers=headers)
     return response.json()
 
 
 def closeMergeRequest(projectId, iid):
-    response = requests.put(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/merge_requests/{iid}",
+    response = requests.put(f"{domain}/api/v4/projects/{projectId}/merge_requests/{iid}",
                             headers=headers, data={"state_event": "close"})
     return response.json()
 
 
 def approveMergeRequest(projectId, iid):
-    response = requests.post(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/merge_requests/{iid}/approve",
+    response = requests.post(f"{domain}/api/v4/projects/{projectId}/merge_requests/{iid}/approve",
                              headers=headers)
     return response.json()
 
 
 def mergeMergeRequest(projectId, iid):
-    response = requests.put(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/merge_requests/{iid}/merge",
+    response = requests.put(f"{domain}/api/v4/projects/{projectId}/merge_requests/{iid}/merge",
                             headers=headers)
     return response.json()
 
 
 def getPipelinesByProjectId(projectId):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/pipelines", headers=headers)
+    response = requests.get(f"{domain}/api/v4/projects/{projectId}/pipelines", headers=headers)
     return response.json()
 
 
 def getPipelineJobsByProjectIdAndPipId(projectId, pipId):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/pipelines/{pipId}/jobs",
+    response = requests.get(f"{domain}/api/v4/projects/{projectId}/pipelines/{pipId}/jobs",
+                            headers=headers)
+    return response.json()
+
+def retry_job(projectId, jobId):
+    response = requests.post(f"{domain}/api/v4/projects/{projectId}/jobs/{jobId}/retry",
                             headers=headers)
     return response.json()
 
 
 def getPipelineJobLogByProjectIdAndJobId(projectId, jobId):
-    response = requests.get(f"https://ite-git01.hktv.com.hk/api/v4/projects/{projectId}/jobs/{jobId}/trace",
+    response = requests.get(f"{domain}/api/v4/projects/{projectId}/jobs/{jobId}/trace",
                             headers=headers)
     return str(response.content)
 
@@ -110,6 +125,19 @@ def getDiffDays(dateStr):
     # Calculate the difference in days
     time_difference = current_date - target_date
     return time_difference.days
+
+
+def is_branch_exists(project_id, branch_name):
+    response = get_branch(project_id, branch_name)
+    if response.status_code == 200:
+        print(f"Branch '{branch_name}' exists in project '{project_id}'.")
+        return True
+    elif response.status_code == 404:
+        print(f"Branch '{branch_name}' does NOT exist in project '{project_id}'.")
+        return False
+    else:
+        print(f"Failed to check branch. Status Code: {response.status_code}, Response: {response.text}")
+        return False
 
 # def deleteOutDateBranch():
 # projectIdList = [
