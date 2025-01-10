@@ -7,8 +7,14 @@ import requests
 
 if __name__ == '__main__':
     addToProduction = True
-    prd_acct = "uat0026@hkmpcl.com.hk"
-    prd_pwd = "ABcd1234"
+
+    config = configparser.ConfigParser()
+    config.read('application.ini')
+    aa = config["DEFAULT"]["jira_token"]
+
+    prd_acct = config["DEFAULT"]["hybris_test_user"]
+    prd_pwd = config["DEFAULT"]["hybris_test_pwd"]
+    hybris_anonymous_token = config["DEFAULT"]["hybris_anonymous_token"]
 
     clipboard_content = pyperclip.paste()
     json_data = json.loads(clipboard_content)
@@ -25,7 +31,7 @@ if __name__ == '__main__':
     if addToProduction:
         form_data = {"grant_type": "password", "username": prd_acct, "password": prd_pwd}
         loginRes = requests.post("https://www.hktvmall.com/hktvwebservices/oauth/token", data=form_data,
-                                 headers={"Authorization": "Basic aGt0dl9pb3M6SCphSyMpSE0yNDg="})
+                                 headers={"Authorization": f"Basic {hybris_anonymous_token}"})
         print(loginRes.json())
         access_token = loginRes.json()["access_token"]
         print(access_token)

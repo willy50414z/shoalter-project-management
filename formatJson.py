@@ -170,17 +170,9 @@ if __name__ == '__main__':
     clipboard_content = pyperclip.paste()
     json_data = json.loads(clipboard_content)
 
-    sort_store_product(json_data)
-    sort_freegift(json_data)
-    # sort_product_store_tags(json_data)
-
-    remove_empty_list(json_data)
-    remove_empty_srting(json_data)
-    remove_new_fields(json_data)
-
-    # sort key
-    json_data = sortKey(json_data)
-
+    sorted_data = sorted(json_data["districts"],
+                          key=lambda x: x["code"])
+    json_data["districts"] = sorted_data
     output_json = json.dumps(json_data, ensure_ascii=False, indent=4)
-    # print(output_json)
-    pyperclip.copy(output_json)
+    print(output_json)
+    # pyperclip.copy(output_json)

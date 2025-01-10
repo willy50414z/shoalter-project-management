@@ -30,11 +30,14 @@ if __name__ == '__main__':
             if source_file.endswith('.java'):
                 file_path = os.path.join(subdir, source_file)
                 # Open and read the file
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    contents = f.read()
-                    # Search for the pattern
-                    if pattern.search(contents):
-                        matching_files.append(file_path)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        contents = f.read()
+                        # Search for the pattern
+                        if pattern.search(contents):
+                            matching_files.append(file_path)
+                except FileNotFoundError:
+                    print(f"{file_path} can't be read")
 
     # Print the matching files
     for has_anno_file in matching_files:

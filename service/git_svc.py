@@ -1,3 +1,5 @@
+import subprocess
+
 import git
 
 
@@ -127,5 +129,23 @@ class GitService:
             print(f"Pushed changes to {remote_name}/{branch_name}")
         except git.exc.GitCommandError as e:
             print(f"Git command error: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+    def get_first_rev(self, sha):
+        try:
+            cmd = [
+                "git", f"rev-list", "--parents", "-n", "1", sha
+            ]
+            output = subprocess.run(cmd, check=True,  # Raises an exception if the command fails
+                                    stdout=subprocess.PIPE,  # Captures the standard output
+                                    stderr=subprocess.PIPE,  # Captures the standard error
+                                    cwd=self.repo_dir
+                                    )
+            raw_rev = output.stdout.__str__()
+            rev = raw_rev[2:len(raw_rev) - 3]
+            return rev.split(" ")
+        except subprocess.CalledProcessError as e:
+            print(f"Error updating property: {e}")
         except Exception as e:
             print(f"Unexpected error: {e}")

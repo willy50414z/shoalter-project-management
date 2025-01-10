@@ -10,19 +10,34 @@ class SyncHybrisDiffToRevampService():
     def __init__(self, project_root_dir):
         self.git_svc = GitService(project_root_dir)
 
+    def get_branch_shas(self, end_commit_sha):
+        head_sha = self.git_svc.get_head_sha()
+        rev = self.git_svc.get_first_rev(head_sha)
+        branch_shas = []
+        while True:
+            branch_shas.append(rev[0])
+            if len(branch_shas) > 500:
+                raise ValueError("commits size is more than 500, please check end_commit_sha in this branch")
+            if rev[0] == end_commit_sha:
+                return branch_shas
+            rev = self.git_svc.get_first_rev(rev[1])
+
     def get_branch_diff(self, branch_name, end_commit_sha):
         diff_info = []
+        branch_commit_shas = self.get_branch_shas(end_commit_sha)
+
         commits = self.git_svc.get_branch_commits(branch_name)
         for commit in commits:
             if end_commit_sha == commit.hexsha:
                 return diff_info
-            elif branch_name.replace("feature/", "") in commit.message and "Merge branch" not in commit.message:
+            elif commit.hexsha in branch_commit_shas:
                 commit_diff_info = {"sha": commit.hexsha, "parent_sha": commit.parents[0].hexsha,
                                     "committed_date": commit.committed_date, "commit_msg": commit.message}
                 commit_diff_info.update(self.git_svc.get_commit_diff(commit))
                 diff_info.append(commit_diff_info)
 
     def get_release_branch_diff(self, target_release_branch_name):
+        target_release_branch_name
         release_branchs = [branch for branch in self.git_svc.get_remote_branchs() if
                            branch.name.startswith('origin/release')]
         release_branchs = sorted(release_branchs, key=lambda x: x.name, reverse=True)
