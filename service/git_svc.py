@@ -11,6 +11,9 @@ class GitService:
     def __repo_dir__(self):
         return self.repo_dir
 
+    def pull(self):
+        self.repo.remotes.origin.pull()
+
     def merge_and_push(self, source, target):
         # Fetch latest changes from remote
         self.repo.remotes.origin.fetch()
@@ -45,6 +48,7 @@ class GitService:
         if branch_name not in self.repo.branches:
             self.repo.remotes.origin.fetch()
         self.repo.git.checkout(branch_name)
+        self.repo.remotes.origin.pull()
 
     def delete_and_checkout(self, branch_name):
         self.checkout("dev")

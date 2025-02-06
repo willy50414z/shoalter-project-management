@@ -1,6 +1,7 @@
 import json
 import os
-import subprocess
+
+from util import cmd_util
 
 ANNOTATION_KEY_METHOD_PATH = "methodPath"
 ANNOTATION_KEY_REMARK = "remark"
@@ -8,18 +9,19 @@ ANNOTATION_LIST = ["EcomRevampServiceMigration", "EcomRevampServiceMigrationSrc"
 
 
 def get_java_file_info(file_path):
-    result = subprocess.run(
-        ['java', '-jar', f"{os.getcwd()}/libs/JavaParser.jar", file_path],
-        capture_output=True,  # Captures stdout and stderr
-        text=True  # Converts byte output to strings
-    )
+
     try:
-        if len(result.stdout) > 0:
-            return json.loads(result.stdout)
+        result = cmd_util.exec(['java', '-jar', f"{os.getcwd()}/libs/JavaParser.jar", file_path])
+    except Exception as e:
+        print(f"parse java file fail, file_path[{file_path}]")
+        raise e
+    try:
+        if len(result) > 0:
+            return json.loads(result)
         else:
             return {}
     except Exception as e:
-        print(f"parse response to json fail, source[{result.stdout}]")
+        print(f"parse response to json fail, source[{result}]")
         raise e
 
 
@@ -56,3 +58,4 @@ def get_revamp_method_anno_info(method):
             if ANNOTATION_KEY_REMARK in annotation["attrs"]:
                 anno_info[ANNOTATION_KEY_REMARK] = annotation["attrs"][ANNOTATION_KEY_REMARK]
     return anno_info
+
