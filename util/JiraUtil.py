@@ -53,7 +53,7 @@ def getEERIncompletedTask():
     issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', 'QA Defect']
     issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
 
-    jql_query = f'Project="EER" AND (status not in ({status_query}) AND issuetype in ({issueType_query}))'
+    jql_query = f'Project="EER" AND (status not in ({status_query}) AND type in ({issueType_query}))'
 
     # jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query}))'
 
@@ -119,7 +119,10 @@ def update_build_ticket(issue_key, summary, description, buildDate):
     return jira.create_issue(fields)
 
 def test():
-    return jira.get_project_version_by_name(version_name="EER@2024-09-09", project="EER")
+    jira.version(id="24062")
+    jira.version_count_related_issues(id="24062")
+    jira.rela
+    return jira.get_project_version_by_name(version_name="MS@2025-01-20", project="MS")
 
 # get single ticket
 # singleIssue = jira.issue('SI-18')

@@ -1,4 +1,5 @@
 import configparser
+import json
 
 import requests
 from datetime import datetime, timedelta
@@ -8,7 +9,6 @@ from util import string_util
 
 ecom_engine_database_id = '12d43989266a8035886be967a4427bc4'
 subtask_database_id = '12d43989266a80a7b970e3749d33540a'  # Replace with your database ID
-
 
 config = configparser.ConfigParser()
 config.read('application.ini')
@@ -25,14 +25,15 @@ peopleIdMap = {
     , 'TW - IT - BE - Ethan Hsieh': '4ec6e82f-4927-412f-ab09-18e9f2fa5917'
     , 'TW - IT - BE - Kenny Ma': '113d872b-594c-81b9-9659-0002d54432ff'
     , 'TW - IT - BE - Wade Wu': '56a2f9ae-a1f5-4021-804a-6c25c4b1b8a0'
-    , 'TW-IT-BE-Lovius Tey': 'aa923001-32ea-44fe-921b-b6c67454b7fb'
+    , 'TW - IT - BE - Tony Ng': 'da35c1a6-fc0a-4111-8c87-9e72be476b60'
 }
 
 team1_service = ["cart-service", "address-service", "order-service", "IIDS", "IIMS", "IIMS-LM"]
 team2_service = ["promotion-service", "product-service", "config-server", "user-service", "internal-API-gateway",
                  "mobile-API-gateway", "caching-management-server", "shoalter-server-starter", "frontend-api-gateway",
                  "internal-api-gateway"]
-team3_service = ["notification-service", "page-component-service","third-party-API-service", "third-party-api-service", "SAC"]
+team3_service = ["notification-service", "page-component-service", "third-party-API-service", "third-party-api-service",
+                 "SAC"]
 exclude_service = ["shoalter-ecommerce-frontend", "personalization-service", "see-management-console-backend",
                    "see-management-console-frontend", "login-service", "game-service", "batch-file-processing-service",
                    "see-management-console-frontend", "see-management-console-backend"]
@@ -42,8 +43,6 @@ headers = {
     'Content-Type': 'application/json',
     'Notion-Version': '2022-06-28'  # Specify the Notion API version
 }
-
-
 
 
 def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
@@ -63,13 +62,13 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
         "select": {
             "equals": releaseDate
         }
-    },{
+    }, {
         "property": "JiraStatus",
         "select": {
             "does_not_equal": "已取消"
         }
     }, {
-        "property": "BuildTicket",
+        "property": "CreateBuildTicketLog",
         "url": {
             "does_not_equal": "xx"
         }
@@ -253,7 +252,6 @@ def get_system_code_and_assignee(issue):
     willy_name = 'TW - IT - BE - Willy Cheng'
     wade_name = 'TW - IT - BE - Wade Wu'
     lovious_name = 'TW-IT-BE-Lovius Tey'
-
     system_name = None
     assignee = willy_name
 
@@ -282,6 +280,8 @@ def get_system_code_and_assignee(issue):
     elif issue.key.startswith("HYBRIS-"):
         system_name = "HYBRIS"
         assignee = willy_name
+    else:
+        assignee = get_assignee_by_issue(issue)
 
     return system_name, assignee
 
@@ -356,6 +356,12 @@ def create_task(db_id, issue):
             }
         }
 
+    if hasattr(issue.fields, "parent") and issue.fields.parent and len(issue.fields.parent.key) > 0:
+        payload["properties"]["Epic"] = {
+            'type': 'url',
+            'url': jira_url_prefix + issue.fields.parent.key
+        }
+
     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
     print(response.json())
     return response
@@ -376,7 +382,7 @@ def createSubTask(issue, task_id=None):
             },
             'Assignee': {
                 'type': 'people',
-                'people': [{'object': 'user', 'id': getAssigneeByIssue(issue)}]
+                'people': [{'object': 'user', 'id': get_assignee_by_issue(issue)}]
             },
             "Ticket": {
                 'type': 'url',
@@ -405,6 +411,7 @@ def createSubTask(issue, task_id=None):
     response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
     print(response.json())
 
+
 def createTodoTask():
     payload = {
         "parent": {"type": "database_id", "database_id": subtask_database_id},
@@ -425,9 +432,12 @@ def createTodoTask():
     print(response.json())
 
 
-def getAssigneeByIssue(issue):
-    return peopleIdMap[
-        issue.fields.assignee.displayName if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap else 'TW - IT - BE - Willy Cheng']
+def get_assignee_by_issue(issue):
+    if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap:
+        return peopleIdMap[issue.fields.assignee.displayName]
+    else:
+        pic_name = issue.fields.customfield_11563.displayName if issue.fields.customfield_11563 is not None and issue.fields.customfield_11563.displayName in peopleIdMap else 'TW - IT - BE - Tony Ng'
+        return peopleIdMap[pic_name]
 
 
 def updateTaskStatus(page, issue):
@@ -473,11 +483,28 @@ def updateTaskStatus(page, issue):
                     'select': {
                         'name': release_date if string_util.is_valid_date(release_date) else "uncheck"
                     }
+                },
+                "CheckTicketMsg": {
+                    'rich_text': [{
+                        'text': {
+                            'content': get_check_task_error_msg(issue)
+                        }
+                    }]
                 }
             }
         }
+
         response = requests.patch(url, json=payload, headers=headers)
         return response.json()
+
+
+def get_check_task_error_msg(issue):
+    msg = ""
+    if not issue.fields.customfield_11568:
+        msg += "[Notes for Testing] missing\r\n"
+    if not issue.fields.duedate:
+        msg += "[DueDate] missing\r\n"
+    return msg[0:max(len(msg) - 2, 0)]
 
 
 def update_subtask_relate_to_task(page_id, task_id):
@@ -498,15 +525,25 @@ def update_subtask_relate_to_task(page_id, task_id):
     return response.json()
 
 
-def update_build_ticket(page_id, issue_key):
+def update_create_build_ticket_log(page_id, issue_key):
     url = f'https://api.notion.com/v1/pages/{page_id}'
     payload = {"properties": {
-        "BuildTicket": {
-            'type': 'url',
-            'url': str(issue_key)
+        "CreateBuildTicketLog": {
+            'rich_text': [{
+                'text': {
+                    'content': str(issue_key)
+                }
+            }]
         }
     }
     }
+
+    issue_json = json.loads(issue_key)
+    if "build_ticket_issue_key" in issue_json:
+        payload["properties"]["BuildTicket"] = {
+            'type': 'url',
+            'url': f"{jira_url_prefix}{issue_json["build_ticket_issue_key"]}"
+        }
     response = requests.patch(url, json=payload, headers=headers)
     return response.json()
 

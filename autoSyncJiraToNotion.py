@@ -126,8 +126,9 @@ def create_team1_task_from_jira():
 def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
     for issue in issueList:
-        if issue.key == "EER-1940":
+        if issue.key == "EER-2238":
             print("aa")
+    for issue in issueList:
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
             continue
@@ -159,8 +160,8 @@ def updateNotionTicketStatus():
 def update_eer_and_team1_ticket_status():
     itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
     for item in itemList:
-        if "EER-1441" in str(item["properties"]["Ticket"]):
-            aa = 0
+        # if "EER-1441" in str(item["properties"]["Ticket"]):
+        #     aa = 0
         if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
             urlAr = item["properties"]["Ticket"]["url"].split("/")
             issueKey = urlAr[len(urlAr) - 1]
@@ -202,18 +203,20 @@ def printJiraTicket():
 if __name__ == '__main__':
     # printJiraTicket()
     # updateNotionTicketStatus()
-    # print(JiraUtil.findIssueByKey("EER-1940").fields)
+    # print(JiraUtil.findIssueByKey("EER-2196").fields)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
-    # print(NotionUtil.findByTicketLike("123")[0])
+    # print(NotionUtil.findByTicketLike("2196")[0])
     # updateNotionTicketStatus()
     # createEcomEngineTaskFromJira()
+    # print(NotionUtil.get_check_task_error_msg(JiraUtil.findIssueByKey("EER-1766")))
+    # print(JiraUtil.test())
 
     # for i in range(1,50,1):
     #     NotionUtil.createTodoTask()
     #     time.sleep(10)
 
-    logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
+    # logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
+    #                     format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
         try:
             now = datetime.now()
