@@ -6,9 +6,10 @@ from service import java_parse_svc
 from service.git_svc import GitService
 from util import cmd_util
 
-revamp_master_repo_dir = "E:/Code/shoalter-ecommerce-business"
+revamp_business_master_repo_dir = "E:/Code/shoalter-ecommerce-business"
 hybris_dir = 'E:/tmp/hktv-hybris/'
 hyris_anno_repo_dir = 'C:/work/hybris_src_code_migration_annotation/'
+revamp_infra_master_repo_dir = "E:/Code/shoalter-ecommerce-infra-master-repo/"
 
 def get_has_ann_file():
     # Pattern to search for
@@ -85,7 +86,21 @@ def check_method_exist(method_path):
         aa = 1
     methodExist = False
     fileExist = False
-    for subdir, _, files in os.walk(revamp_master_repo_dir + "/shoalter-ecommerce-business-" + anno_service):
+    for subdir, _, files in os.walk(revamp_business_master_repo_dir + "/shoalter-ecommerce-business-" + anno_service):
+        for file in files:
+            if file.endswith(anno_clazz_name + ".java"):
+                fileExist = True
+                if "getConsignmentWarehouseAndThirdPartyLogisticsWarehouseOrderEntries" == anno_method_name:
+                    aa = 1
+                file_path = os.path.join(subdir, file)
+                java_structure = java_parse_svc.get_java_file_info(file_path)
+                if java_structure:
+                    revamp_file_method_list = java_structure["methodList"]
+                    for revamp_file_method in revamp_file_method_list:
+                        if revamp_file_method["name"] == anno_method_name:
+                            methodExist = True
+
+    for subdir, _, files in os.walk(revamp_infra_master_repo_dir + "/shoalter-" + anno_service):
         for file in files:
             if file.endswith(anno_clazz_name + ".java"):
                 fileExist = True
@@ -107,7 +122,7 @@ def check_method_exist(method_path):
 
 
 def switch_revamp_to_branch(branch):
-    return cmd_util.exec(["pullSubmodule.bat", branch], revamp_master_repo_dir)
+    return cmd_util.exec(["pullSubmodule.bat", branch], revamp_business_master_repo_dir)
 
 
 if __name__ == '__main__':
