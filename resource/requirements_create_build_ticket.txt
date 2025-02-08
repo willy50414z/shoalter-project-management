@@ -1,0 +1,4 @@
+jira
+GitPython
+requests
+pyyaml
