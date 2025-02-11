@@ -170,7 +170,7 @@ class OpenSearchService:
 
     def search(self, headers, payload):
         url = "https://backbone-efk.hktv.com.hk/internal/search/opensearch"
-        if env == 'Dev' or env == 'Staging':
+        if self.env == 'Dev' or self.env == 'Staging':
             url = "https://devstg-efk.hkmpcl.com.hk/internal/search/opensearch"
 
         headers["cookie"] = f"security_authentication={self.auth_cookie}"
@@ -204,14 +204,19 @@ class OpenSearchService:
         return search_payload_obj
 
     def handle_query_result(self, hits):
+        output_file_content = ""
         for hit in hits:
             if hit["_id"] not in self.exist_log_id:
                 self.exist_log_id.append(hit["_id"])
                 if self.output_file:
-                    with open(self.output_file, "a") as file:
-                        file.write(hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log'])
+                    output_file_content = f"{output_file_content}{hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log']}"
                 else:
-                    print(hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log'][:len(hit['_source']['log'])-2])
+                    print(hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log'][
+                                                                                  :len(hit['_source']['log']) - 2])
+        if len(output_file_content)>0:
+            with open(self.output_file, "a", encoding="utf-8") as file:
+                file.write(output_file_content)
+            print(f"{len(hits)} hits has outputs to {self.output_file}")
 
     def add_to_fail_search_periods(self, start_datetime, end_datetime, e):
         self.search_fail_periods.append({"start_datetime": self.datetime_to_opensearch_time(start_datetime),
@@ -258,9 +263,6 @@ class OpenSearchService:
             start_datetime = next_datetime
             if start_datetime >= end_datetime:
                 break
-        if miss_date:
-            print(f"miss_date[{miss_date}]")
-            print()
 
     def set_env(self):
         if self.env == 'Dev':
