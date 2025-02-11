@@ -9,7 +9,8 @@ from util import cmd_util
 revamp_business_master_repo_dir = "E:/Code/shoalter-ecommerce-business"
 hybris_dir = 'E:/tmp/hktv-hybris/'
 hyris_anno_repo_dir = 'C:/work/hybris_src_code_migration_annotation/'
-revamp_infra_master_repo_dir = "E:/Code/shoalter-ecommerce-infra-master-repo/"
+revamp_infra_master_repo_dir = "E:/Code/shoalter-ecommerce-infra-master-repo"
+
 
 def get_has_ann_file():
     # Pattern to search for
@@ -23,15 +24,6 @@ def get_has_ann_file():
 
     # Walk through the directory
     for subdir, _, files in os.walk(hybris_dir):
-        # skip committable dir
-        # if subdir.startswith("C:/work/hybris_docker/hybris_docker_hktvmall/bin/ext-hktv-dob") or subdir.startswith(
-        #         "C:/work/hybris_docker/hybris_docker_hktvmall/bin/ext-hktv-oms") or subdir.startswith(
-        #     "C:/work/hybris_docker/hybris_docker_hktvmall/bin/resources") or subdir.startswith(
-        #     "C:/work/hybris_docker/hybris_docker_hktvmall/bin/cis") or subdir.startswith(
-        #     "C:/work/hybris_docker/hybris_docker_hktvmall/bin/ext-hktv") or subdir.startswith(
-        #     "C:/work/hybris_docker/hybris_docker_hktvmall/bin/tools"):
-        #     continue
-
         for source_file in files:
             # Check if the file is a .java file
             if source_file.endswith('.java'):
@@ -78,6 +70,7 @@ def get_method_paths(matching_files):
 
 
 def check_method_exist(method_path):
+    # print(f"[check_method_exist]{method_path}")
     methodPathAr = method_path.split("#")
     if len(methodPathAr) < 3:
         return
@@ -105,7 +98,11 @@ def check_method_exist(method_path):
                         if revamp_file_method["name"] == anno_method_name:
                             methodExist = True
 
-    for subdir, _, files in os.walk(revamp_infra_master_repo_dir + "/shoalter-" + anno_service):
+    infra_service_prefix = "shoalter-ecommerce-"
+    if "config-server" == anno_service:
+        infra_service_prefix = "shoalter-"
+
+    for subdir, _, files in os.walk(revamp_infra_master_repo_dir + f"/{infra_service_prefix}" + anno_service):
         for file in files:
             if file.endswith(anno_clazz_name + ".java"):
                 fileExist = True
@@ -127,15 +124,17 @@ def check_method_exist(method_path):
 
 
 def switch_revamp_to_branch(branch):
-    return cmd_util.exec(["pullSubmodule.bat", branch], revamp_business_master_repo_dir)
+    cmd_util.exec(["pullSubmodule.bat", branch], revamp_business_master_repo_dir)
+    cmd_util.exec(["pullSubmodule.bat", branch], revamp_infra_master_repo_dir)
 
 
 if __name__ == '__main__':
-    revamp_target_branch = "dev"
+    revamp_target_branch = "staging"
+    switch_revamp_to_branch(revamp_target_branch)
+    print(f"switch revamp master repo project to {revamp_target_branch}")
 
     matching_files = get_has_ann_file()
-    print(f"switch revamp master repo project to {revamp_target_branch}")
-    switch_revamp_to_branch(revamp_target_branch)
+
     print("anaylyze hybris file and retrieve method paths")
     methodPaths = get_method_paths(matching_files)
     for methodPath in methodPaths:
