@@ -458,7 +458,7 @@ def updateTaskStatus(page, issue):
                 break
         if len(fix_versions) > 0:
             fix_versions = fix_versions[0:len(fix_versions) - 1]
-
+        system_name, assignee = get_system_code_and_assignee(issue)
         payload = {
             "properties": {
                 # 'Assignee': {
@@ -490,6 +490,16 @@ def updateTaskStatus(page, issue):
                             'content': get_check_task_error_msg(issue)
                         }
                     }]
+                }
+                , "System": {
+                    "type": "select",
+                    'select': {
+                        'name': system_name
+                    }
+                },
+                "Name": {
+                    "type": "title",
+                    "title": [{"type": "text", "text": {"content": f"[{issue.key}] {issue.fields.summary}"}}]
                 }
             }
         }
@@ -568,6 +578,10 @@ def updateSubTaskStatus(page, issue):
                         'select': {
                             'name': issue.fields.status.name
                         }
+                    }
+                    , "Name": {
+                        "type": "title",
+                        "title": [{"type": "text", "text": {"content": f"TODO"}}]
                     }
                 }
             }
