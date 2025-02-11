@@ -581,7 +581,7 @@ def updateSubTaskStatus(page, issue):
                     }
                     , "Name": {
                         "type": "title",
-                        "title": [{"type": "text", "text": {"content": f"TODO"}}]
+                        "title": [{"type": "text", "text": {"content": f"[{issue.key}] {issue.fields.summary}"}}]
                     }
                 }
             }
