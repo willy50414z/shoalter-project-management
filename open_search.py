@@ -1,12 +1,22 @@
+import datetime
+
+from dateutil.relativedelta import relativedelta
+
 from service.open_search_svc import OpenSearchService
 
 if __name__ == '__main__':
-    env = "Prod"  # Dev / Staging / Prod
-    output_file = "E:/aa.txt"  # "E:/aa.txt" 空值就是直接印在console
-    start_iso_datetime = "2025-02-01T00:55:00.001Z" #start datetime
-    end_iso_datetime = "2025-02-01T01:00:00.001Z" #end datetime
-    kubernetes_pod_name = ["iims", "iids"] # pod_names
-    keyword_and = [] # criteria
+    env = "Dev"  # Dev / Staging / Prod
+    output_file = ""  # "E:/aa.txt" 空值就是直接印在console
+    # start_iso_datetime = "2025-02-12T18:30:00.148Z" #start datetime
+    # end_iso_datetime = "2025-02-15T16:45:06.148Z" #end datetime
+
+    start_iso_datetime = (datetime.datetime.now() - relativedelta(**{"minutes": 40})).isoformat()
+    start_iso_datetime = start_iso_datetime[0:len(start_iso_datetime)-3] + "Z"
+    end_iso_datetime = datetime.datetime.now().isoformat()
+    end_iso_datetime = end_iso_datetime[0:len(end_iso_datetime) - 3] + "Z"
+
+    kubernetes_pod_name = [] # pod_names
+    keyword_and = ["646229c3745eefbb"] # criteria
     keyword_or = [] # criteria
 
     interval_unit = "months"  # years,months,days,hours,minutes

@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timezone
 import time
 
@@ -80,7 +81,7 @@ class OpenSearchService:
         self.exist_log_id = []
         self.search_fail_periods = []
         if self.env == 'Dev':
-            self.index = "[applications]_app-cos*"
+            self.index = "[applications]_cos-v2-dev*"
         elif self.env == "Staging":
             self.index = "[applications]_cos-v2-staging_*"
         elif self.env == "Prod":
@@ -203,20 +204,36 @@ class OpenSearchService:
                                       kubernetes_pod_names=kubernetes_pod_names)
         return search_payload_obj
 
-    def handle_query_result(self, hits):
+    def get_hit_text(self, hit):
+        log = hit['_source']['log']
+        text = ""
+        max_len=185
+        if len(log)>max_len:
+            for i in range(0,math.ceil(len(log)/max_len)*max_len, max_len+1):
+                if i == 0:
+                    text = f"{log[i:i + max_len]}\t{hit['_source']['kubernetes']['pod_name']}"
+                else:
+                    text = f"{text}\n{log[i:i+max_len]}"
+        else:
+            text = log
+        return text
+
+    def handle_query_result(self, hits, start_datetime, end_datetime):
         output_file_content = ""
+        output_rows = 0
         for hit in hits:
             if hit["_id"] not in self.exist_log_id:
                 self.exist_log_id.append(hit["_id"])
+                output_rows += 1
                 if self.output_file:
-                    output_file_content = f"{output_file_content}{hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log']}"
+                    output_file_content = f"{output_file_content}\n{self.get_hit_text(hit)}"
                 else:
-                    print(hit['_source']['kubernetes']['namespace_name'] + '\t' + hit['_source']['log'][
-                                                                                  :len(hit['_source']['log']) - 2])
-        if len(output_file_content)>0:
+                    print(self.get_hit_text(hit))
+        if len(output_file_content) > 0:
             with open(self.output_file, "a", encoding="utf-8") as file:
-                file.write(output_file_content)
-            print(f"{len(hits)} hits has outputs to {self.output_file}")
+                file.write(output_file_content[2:])
+            print(
+                f"{self.datetime_to_opensearch_time(start_datetime)} ~ {self.datetime_to_opensearch_time(end_datetime)} has {output_rows} hits been output to {self.output_file}")
 
     def add_to_fail_search_periods(self, start_datetime, end_datetime, e):
         self.search_fail_periods.append({"start_datetime": self.datetime_to_opensearch_time(start_datetime),
@@ -227,14 +244,14 @@ class OpenSearchService:
                           keyword_or=[]):
         search_payload_obj = self.build_payload(start_datetime, end_datetime, kubernetes_pod_names, keyword_and,
                                                 keyword_or)
-
+        time.sleep(0.2)
         search_result = self.search(self.header, search_payload_obj.to_json())
         try:
             result_json = json.loads(search_result)
             if "hits" in result_json["rawResponse"] and "hits" in result_json["rawResponse"]["hits"] and \
                     result_json['rawResponse']['_shards']['failed'] == 0:
                 hits = result_json["rawResponse"]["hits"]["hits"]
-                self.handle_query_result(hits)
+                self.handle_query_result(hits, start_datetime, end_datetime)
             else:
                 self.add_to_fail_search_periods(start_datetime, end_datetime, search_result)
                 return
