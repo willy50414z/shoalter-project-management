@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime
 
 from service import java_parse_svc
@@ -37,7 +38,6 @@ class SyncHybrisDiffToRevampService():
                 diff_info.append(commit_diff_info)
 
     def get_release_branch_diff(self, target_release_branch_name):
-        target_release_branch_name
         release_branchs = [branch for branch in self.git_svc.get_remote_branchs() if
                            branch.name.startswith('origin/release')]
         release_branchs = sorted(release_branchs, key=lambda x: x.name, reverse=True)
@@ -74,6 +74,12 @@ class SyncHybrisDiffToRevampService():
             result["remark"] = revamp_method_anno_info[java_parse_svc.ANNOTATION_KEY_REMARK]
         return result
 
+    def is_file_contains_annotation(self, file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            contents = f.read()
+            pattern = re.compile(r'@EcomRevamp')
+            return pattern.search(contents)
+
     def get_revamp_related_change_list(self, commit_diff, repo_dir):
         change_list = []
         for key, value in commit_diff.items():
@@ -83,7 +89,7 @@ class SyncHybrisDiffToRevampService():
                 # change to parent sha
                 self.git_svc.reset(commit_diff["parent_sha"])
                 print(f"start analyze changed file, sha[{commit_diff["parent_sha"]}]file_path[{file_path}]")
-                if os.path.exists(file_path):
+                if os.path.exists(file_path) and self.is_file_contains_annotation(file_path):
                     java_file_info = java_parse_svc.get_java_file_info(file_path)
                     if java_file_info:
                         for line_num in value:
