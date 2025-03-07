@@ -75,15 +75,19 @@ def create_notion_item(issue):
         if 0 == len(notionItemList):
             # create notion
             if issue.fields.issuetype.subtask:
-                NotionUtil.createSubTask(issue)
+                res = NotionUtil.createSubTask(issue)
+                logging.info(f"create subtask {issue.key} res code[{res.status_code}]res data[{res.json()}]")
             else:
                 create_task_res = NotionUtil.create_task(NotionUtil.ecom_engine_database_id, issue)
+                logging.info(
+                    f"create subtask {issue.key} res code[{create_task_res.status_code}]res data[{create_task_res.json()}]")
                 # 有subtask的task就不需要建subtasks
                 subtask = NotionUtil.findByTicket(NotionUtil.subtask_database_id,
                                                   NotionUtil.jira_url_prefix + issue.key)
                 try:
                     if len(issue.fields.subtasks) == 0 and 0 == len(subtask):
-                        NotionUtil.createSubTask(issue, create_task_res.json()["id"])
+                        res = NotionUtil.createSubTask(issue, create_task_res.json()["id"])
+                        logging.info(f"create subtask {issue.key} res code[{res.status_code}]res data[{res.json()}]")
                     elif "Task" not in subtask and len(subtask) > 0:
                         NotionUtil.update_subtask_relate_to_task(subtask[0]["id"], create_task_res.json()["id"])
                         # TODO remove task if subTask db contains Task
@@ -103,20 +107,15 @@ def create_team1_task_from_jira():
                                                                                          issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
                             issueList))
     # for issue in issueList:
-    #     if issue.key == "EER-1219":
+    #     if issue.key == "MS-7339":
     #         print(issue.key)
     # print("==================")
 
     # sort => build main ticket first
     issueList = sorted(issueList, key=lambda issue: issue.fields.issuetype.subtask)
 
-    # for issue in issueList:
-    #     print(issue.key)
-
     # check is ticket exist in notion
     for issue in issueList:
-        if issue.key == "EER-1462":
-            print("aa")
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
             continue
@@ -126,9 +125,11 @@ def create_team1_task_from_jira():
 def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
     for issue in issueList:
-        if issue.key == "EER-2238":
+        if issue.key == "EER-2468":
             print("aa")
     for issue in issueList:
+        if issue.key == "EER-2468":
+            print("aa")
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
             continue
@@ -160,12 +161,20 @@ def updateNotionTicketStatus():
 def update_eer_and_team1_ticket_status():
     itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
     for item in itemList:
+        if "MS-7339" in str(item["properties"]["Ticket"]):
+            aa = 0
+    for item in itemList:
         # if "EER-1441" in str(item["properties"]["Ticket"]):
         #     aa = 0
         if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
+            if "MS-7339" in str(item["properties"]["Ticket"]):
+                aa = 0
             urlAr = item["properties"]["Ticket"]["url"].split("/")
             issueKey = urlAr[len(urlAr) - 1]
-            NotionUtil.updateTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
+            res = NotionUtil.updateTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
+            if res.status_code != 200:
+                logging.error(
+                    f"[update_eer_and_team1_ticket_status] update notion info fail, status_code[{res.status_code}]msg[{res.text}]")
 
     itemList = NotionUtil.findOpenedItem(NotionUtil.subtask_database_id)
     for item in itemList:
@@ -211,12 +220,12 @@ if __name__ == '__main__':
     # print(NotionUtil.get_check_task_error_msg(JiraUtil.findIssueByKey("EER-1766")))
     # print(JiraUtil.test())
 
-    # for i in range(1,50,1):
+    # for i in range(1,10,1):
     #     NotionUtil.createTodoTask()
     #     time.sleep(10)
 
-    # logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
-    #                     format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
         try:
             now = datetime.now()
