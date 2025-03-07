@@ -5,7 +5,6 @@ from configparser import ConfigParser
 
 import yaml
 
-from service import yaml_svc
 from util import NotionUtil, GitlabUtil, JiraUtil, maven_util
 from service.git_svc import GitService
 
@@ -32,18 +31,18 @@ class BuildTicketService:
                    "gitlab_url": "https://ite-git01.hktv.com.hk/hktv/tw/shoalter_ecommerce/inventory/ims",
                    "domain": "iims-restful.shoalter.com,iims-grpc.shoalter.com",
                    "system_full_name": "Share Stock HKTVmall IIMS (Intracompany Inventory Management System)",
-                   "repo_path": "E:/Code/nochange/ims",
+                   "repo_path": "E:/Code/nochange/ims/",
                    "update_infra_grpc_proto_version": False}
         , "IIDS": {"project_id": 531,
                    "gitlab_url": "https://ite-git01.hktv.com.hk/hktv/tw/shoalter_ecommerce/inventory/ids",
                    "domain": "iids-restful.shoalter.com, iids-grpc.shoalter.com",
                    "system_full_name": "Share Stock IIDS (Intracompany Inventory Distribution system) ",
-                   "repo_path": "E:/Code/nochange/ids",
+                   "repo_path": "E:/Code/nochange/ids/",
                    "update_infra_grpc_proto_version": False}
         , "IIMS-LM": {"project_id": 865,
                       "gitlab_url": "https://ite-git01.hktv.com.hk/hktv/tw/shoalter_ecommerce/inventory/uuid-iims",
                       "system_full_name": "Share Stock LittleMall IIMS (Intracompany Inventory Management System)",
-                      "repo_path": "E:/Code/nochange/uuid-iims",
+                      "repo_path": "E:/Code/nochange/uuid-iims/",
                       "update_infra_grpc_proto_version": False}
     }
 
@@ -105,8 +104,10 @@ class BuildTicketService:
             notionItemInfo[sys_code]["tickets"] = []
             notionItemInfo[sys_code]["notion_pages_id"] = []
         notionItemInfo[sys_code]["tickets"].append(ticketLink)
+        notionItemInfo[sys_code]["tickets"] = list(set(notionItemInfo[sys_code]["tickets"]))
         notionItemInfo[sys_code]["release_date"] = notionItem["properties"]["ReleaseDate"]["select"]["name"]
         notionItemInfo[sys_code]["notion_pages_id"].append(notionItem["id"])
+        notionItemInfo[sys_code]["notion_pages_id"] = list(set(notionItemInfo[sys_code]["notion_pages_id"]))
         return notionItemInfo
 
     def get_release_notion_info(self, release_date):
@@ -118,27 +119,35 @@ class BuildTicketService:
             sys_code = notionItem["properties"]["System"]["select"]["name"]
             if sys_code != 'HYBRIS':
                 if len(notionItem["properties"]["CreateBuildTicketLog"]["rich_text"]) > 0 and \
-                        notionItem["properties"]["CreateBuildTicketLog"]["rich_text"][0]["text"]["content"].startswith(
-                            NotionUtil.jira_url_prefix):
+                        "build_ticket" in json.loads(
+                    notionItem["properties"]["CreateBuildTicketLog"]["rich_text"][0]["text"]["content"]):
+                    # build ticket已經完成了
                     continue
                 elif len(notionItem["properties"]["CreateBuildTicketLog"]["rich_text"]) > 0 and \
                         notionItem["properties"]["CreateBuildTicketLog"]["rich_text"][0]["text"]["content"]:
                     completeRatio = notionItem["properties"]["CompleteRatio"]["rollup"]["number"]
-                    if completeRatio is not None and completeRatio < 1 or sys_code in not_complete_sys:
-                        not_complete_sys.append(sys_code)
-                        notionItemInfo[sys_code] = None
-                        print("task is not completed, sys_code[" + sys_code + "]ticketLink[" +
-                              notionItem["properties"]["Ticket"]["url"] + "]")
+                    # if (completeRatio is not None and completeRatio < 1 and
+                    #     notionItem["properties"]["Status"]["status"]["name"] != "Done") or sys_code in not_complete_sys:
+                    #     not_complete_sys.append(sys_code)
+                    #     notionItemInfo[sys_code] = None
+                    #     print("task is not completed, sys_code[" + sys_code + "]ticketLink[" +
+                    #           notionItem["properties"]["Ticket"]["url"] + "]")
+                    if notionItem["properties"]["Status"]["status"]["name"] != "Staging":
+                        print("task is not merged to staging, sys_code[" + sys_code + "]ticketLink[" +
+                                  notionItem["properties"]["Ticket"]["url"] + "]")
                     else:
                         build_ticket_info = json.loads(
                             notionItem["properties"]["CreateBuildTicketLog"]["rich_text"][0]["text"]["content"])
                         if build_ticket_info["stage_id"] == self.create_raw_build_ticket_stage_id:
                             notionItemInfo[sys_code] = \
                                 self.build_notion_item_info(sys_code, notionItem, notionItemInfo)[sys_code]
-                            notionItemInfo[sys_code]["build_ticket_issue_key"] = build_ticket_info[
-                                "build_ticket_issue_key"]
+                            if "build_ticket_issue_key" not in notionItemInfo[sys_code]:
+                                notionItemInfo[sys_code]["build_ticket_issue_key"] = build_ticket_info[
+                                    "build_ticket_issue_key"]
+
                         else:
-                            notionItemInfo[sys_code] = build_ticket_info
+                            if sys_code not in notionItemInfo:
+                                notionItemInfo[sys_code] = build_ticket_info
                 else:
                     notionItemInfo[sys_code] = self.build_notion_item_info(sys_code, notionItem, notionItemInfo)[
                         sys_code]
@@ -349,7 +358,7 @@ class BuildTicketService:
 
     def check_yamls_has_same_keys(self, notion_info):
         for sys_code in notion_info.keys():
-            if self.is_skip_this_stage(notion_info, sys_code, self.stage_id):
+            if self.is_skip_this_stage(notion_info, sys_code, self.stage_id) or sys_code in ["IIDS","IIMS"]:
                 continue
             print(f"check {sys_code} vault/configmap keys are same in envs")
             try:
@@ -374,6 +383,12 @@ class BuildTicketService:
                 return False
             yaml_keys = self.get_yaml_data_keys(sys_code, file_path)
             if env != "dev" and yaml_keys != last_yaml_data_keys:
+                for yaml_key in yaml_keys:
+                    if yaml_key not in last_yaml_data_keys:
+                        print(f"yaml_key[{yaml_key}] is not sync")
+                for last_yaml_data_key in last_yaml_data_keys:
+                    if last_yaml_data_key not in yaml_keys:
+                        print(f"yaml_key[{last_yaml_data_key}] is not sync")
                 return False
             last_yaml_data_keys = yaml_keys
         return True
@@ -389,7 +404,8 @@ class BuildTicketService:
                     for key in data["data"]:
                         yaml_keys.append(key)
         else:
-            data = yaml.safe_load(file_path)
+            with open(file_path, "r") as file:
+                data = yaml.safe_load(file)
             for key in data["data"]:
                 yaml_keys.append(key)
         yaml_keys.sort()
@@ -400,12 +416,13 @@ class BuildTicketService:
         envs = ["dev", "staging", "prod"]
         files_name = ["configmap.yaml", "secret-vault.yaml"]
         for sys_code in notion_info.keys():
-            if self.is_skip_this_stage(notion_info, sys_code, self.stage_id):
+            if self.is_skip_this_stage(notion_info, sys_code, self.stage_id) or sys_code in ["IIDS","IIMS"]:
                 continue
-            GitService(self.system_base_info[sys_code]["repo_path"]).checkout("feature/EER-2095")
+            GitService(self.system_base_info[sys_code]["repo_path"]).checkout("staging")
             print(f"check {sys_code} properties values are set in envs")
             try:
-                properties = self.get_properties_values(f"{self.system_base_info[sys_code]["repo_path"]}src/main/resources/application.properties")
+                properties = self.get_properties_values(
+                    f"{self.system_base_info[sys_code]["repo_path"]}src/main/resources/application.properties")
                 env_variable_keys = self.get_env_variable_keys(properties)
                 for env in envs:
                     yamls_keys = []
@@ -486,7 +503,7 @@ class BuildTicketService:
                 #     f"create build ticket, sys_code[{sys_code}]release_version[{release_version}]title[{title}]desc[{desc}]")
                 build_ticket_issue_key = JiraUtil.update_build_ticket(notion_info[sys_code]["build_ticket_issue_key"],
                                                                       title, desc, release_version)
-                print("build ticket create success, issue.key[" + str(build_ticket_issue_key) + "]")
+                print("build ticket create success, issue.key[" + str(notion_info[sys_code]["build_ticket_issue_key"]) + "]")
             except Exception as e:
                 self.update_process(sys_code, notion_info, e)
 
@@ -587,10 +604,18 @@ class BuildTicketService:
 
 
 if __name__ == '__main__':
-    releaseDate = "2025-02-10"
+    releaseDate = "2025-03-10"
     bt_svc = BuildTicketService()
-    # # bt_svc.create_raw_ticket(releaseDate)
+    # bt_svc.create_raw_ticket(releaseDate)
     bt_svc.update_build_ticket_info(releaseDate)
+    # notion_info = {}
+    # # notion_info["IIMS-LM"] = {"stage_id":0}
+    # notion_info["IIDS"] = {"stage_id":0}
+    # notion_info["IIMS"] = {"stage_id":0}
+    #
+    # bt_svc.check_all_properties_variables_has_set(notion_info)
+    #
+    # bt_svc.check_yamls_has_same_keys(notion_info)
 
     # BuildTicketService().check_all_properties_variables_has_set({"address-service":{"stage_id":0}})
 

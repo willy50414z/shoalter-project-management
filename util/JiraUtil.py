@@ -115,8 +115,7 @@ def update_build_ticket(issue_key, summary, description, buildDate):
         , "customfield_11563": {"accountId": "626b9d12d364ae00680b40a4"}
     }
     issue = jira.issue(issue_key)
-    issue.update(fields=fields)
-    return jira.create_issue(fields)
+    return issue.update(fields=fields)
 
 def test():
     jira.version(id="24062")

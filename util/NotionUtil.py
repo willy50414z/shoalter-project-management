@@ -89,7 +89,7 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
 
 
 def findByTicketLike(issueKey):
-    url = f'https://api.notion.com/v1/databases/{subtask_database_id}/query'
+    url = f'https://api.notion.com/v1/databases/{ecom_engine_database_id}/query'
     payload = {"page_size": 100, "filter": {
         "property": "Ticket",
         "rich_text": {
@@ -362,9 +362,7 @@ def create_task(db_id, issue):
             'url': jira_url_prefix + issue.fields.parent.key
         }
 
-    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
-    print(response.json())
-    return response
+    return requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
 
 
 def createSubTask(issue, task_id=None):
@@ -408,8 +406,7 @@ def createSubTask(issue, task_id=None):
         }
     }
 
-    response = requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
-    print(response.json())
+    return requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
 
 
 def createTodoTask():
@@ -491,12 +488,7 @@ def updateTaskStatus(page, issue):
                         }
                     }]
                 }
-                , "System": {
-                    "type": "select",
-                    'select': {
-                        'name': system_name
-                    }
-                },
+                ,
                 "Name": {
                     "type": "title",
                     "title": [{"type": "text", "text": {"content": f"[{issue.key}] {issue.fields.summary}"}}]
@@ -504,8 +496,15 @@ def updateTaskStatus(page, issue):
             }
         }
 
-        response = requests.patch(url, json=payload, headers=headers)
-        return response.json()
+        if system_name:
+            payload["properties"]["System"] = {
+                "type": "select",
+                'select': {
+                    'name': system_name
+                }
+            }
+
+        return requests.patch(url, json=payload, headers=headers)
 
 
 def get_check_task_error_msg(issue):
@@ -537,15 +536,16 @@ def update_subtask_relate_to_task(page_id, task_id):
 
 def update_create_build_ticket_log(page_id, issue_key):
     url = f'https://api.notion.com/v1/pages/{page_id}'
-    payload = {"properties": {
-        "CreateBuildTicketLog": {
-            'rich_text': [{
-                'text': {
-                    'content': str(issue_key)
-                }
-            }]
+    payload = {"properties":
+        {
+            "CreateBuildTicketLog": {
+                'rich_text': [{
+                    'text': {
+                        'content': str(issue_key)
+                    }
+                }]
+            }
         }
-    }
     }
 
     issue_json = json.loads(issue_key)
@@ -554,6 +554,13 @@ def update_create_build_ticket_log(page_id, issue_key):
             'type': 'url',
             'url': f"{jira_url_prefix}{issue_json["build_ticket_issue_key"]}"
         }
+
+    if "build_ticket" in issue_json:
+        payload["properties"]["BuildTicket"] = {
+            'type': 'url',
+            'url': issue_json["build_ticket"]
+        }
+
     response = requests.patch(url, json=payload, headers=headers)
     return response.json()
 
