@@ -129,7 +129,8 @@ class SyncHybrisDiffToRevampService():
                     branch_change_summary[file_path] = {}
                     branch_change_summary[file_path]["sha"] = [sha]
                     branch_change_summary[file_path]["commit_msg"] = [commit_msg]
-                    branch_change_summary[file_path]["related_method"] = changeRow[file_path]["related_method"]
+                    if "related_method" in changeRow[file_path]:
+                        branch_change_summary[file_path]["related_method"] = changeRow[file_path]["related_method"]
                 else:
                     branch_change_summary[file_path]["sha"].append(sha)
                     branch_change_summary[file_path]["commit_msg"].append(commit_msg)
