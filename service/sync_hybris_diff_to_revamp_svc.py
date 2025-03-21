@@ -125,22 +125,24 @@ class SyncHybrisDiffToRevampService():
             commit_msg = revamp_related_change["commit_msg"]
             for changeRow in revamp_related_change["revamp_related_info_list"]:
                 file_path = list(changeRow.keys())[0]
-                if file_path not in branch_change_summary:
-                    branch_change_summary[file_path] = {}
-                    branch_change_summary[file_path]["sha"] = [sha]
-                    branch_change_summary[file_path]["commit_msg"] = [commit_msg]
+                class_path = file_path[:file_path.find(":")]
+                if class_path not in branch_change_summary:
+                    branch_change_summary[class_path] = {}
+                    branch_change_summary[class_path]["sha"] = [sha]
+                    branch_change_summary[class_path]["commit_msg"] = [commit_msg]
                     if "related_method" in changeRow[file_path]:
-                        branch_change_summary[file_path]["related_method"] = changeRow[file_path]["related_method"]
+                        branch_change_summary[class_path]["related_method"] = changeRow[file_path]["related_method"]
                 else:
-                    branch_change_summary[file_path]["sha"].append(sha)
-                    branch_change_summary[file_path]["commit_msg"].append(commit_msg)
+                    branch_change_summary[class_path]["sha"].append(sha)
+                    branch_change_summary[class_path]["commit_msg"].append(commit_msg)
         return branch_change_summary
 
     def build_related_service_set(self, branch_change_summary):
         related_service_set = {""}
         for file_path in branch_change_summary.keys():
-            for related_method in branch_change_summary[file_path]["related_method"]:
-                related_service_set.add(related_method.split("#")[0])
+            if "related_method" in branch_change_summary[file_path]:
+                for related_method in branch_change_summary[file_path]["related_method"]:
+                    related_service_set.add(related_method.split("#")[0])
 
         related_service_list = []
         for related_service in related_service_set:
