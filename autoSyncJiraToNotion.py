@@ -1,3 +1,5 @@
+import threading
+
 from util import JiraUtil, NotionUtil
 import time
 from datetime import datetime
@@ -64,19 +66,20 @@ excluded_sub_task = ["MS-1664", "EER-108", "EER-109", "EER-110", "EER-276", "EER
 
 def create_notion_item(issue):
     if issue.key in excluded_sub_task:
-        print(f"{issue.key} is exclude for save block")
+        # print(f"{issue.key} is exclude for save block")
         return
     if issue.fields.issuetype.name != '大型工作' and not issue.key.startswith('BUILD'):
         notionItemList = NotionUtil.findByTicket(
             NotionUtil.subtask_database_id if issue.fields.issuetype.subtask else NotionUtil.ecom_engine_database_id,
             NotionUtil.jira_url_prefix + issue.key)
-        if "EER-1219" == issue.key:
+        if "MS-1929" == issue.key:
             aa = 0
         if 0 == len(notionItemList):
             # create notion
             if issue.fields.issuetype.subtask:
-                res = NotionUtil.createSubTask(issue)
-                logging.info(f"create subtask {issue.key} res code[{res.status_code}]res data[{res.json()}]")
+                if issue.fields.parent.key not in excluded_sub_task:
+                    res = NotionUtil.createSubTask(issue)
+                    logging.info(f"create subtask {issue.key} res code[{res.status_code}]res data[{res.json()}]")
             else:
                 create_task_res = NotionUtil.create_task(NotionUtil.ecom_engine_database_id, issue)
                 logging.info(
@@ -102,10 +105,11 @@ def create_team1_task_from_jira():
     # for issue in issueList:
     #     print(issue.key)
     # filt out build and complete ticket
-    issueList = list(filter(lambda issue: not issue.key.startswith('BUILD') and ((
-                                                                                         not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
-                                                                                         issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
-                            issueList))
+    issueList = list(
+        filter(lambda issue: not issue.key.startswith('BUILD') and not issue.fields.status.name == "已取消" and ((
+                                                                                                                         not issue.fields.issuetype.subtask and issue.key not in excludeParentKey and issue.fields.status.name not in completeTaskStatusList) or (
+                                                                                                                         issue.fields.issuetype.subtask and issue.fields.parent.key not in excludeParentKey and issue.key not in excludeTicket and issue.fields.parent.fields.status.name not in completeTaskStatusList)),
+               issueList))
     # for issue in issueList:
     #     if issue.key == "MS-7339":
     #         print(issue.key)
@@ -115,33 +119,38 @@ def create_team1_task_from_jira():
     issueList = sorted(issueList, key=lambda issue: issue.fields.issuetype.subtask)
 
     # check is ticket exist in notion
+    logging.info(f"waiting for create team1 tickets count[{len(issueList)}]")
     for issue in issueList:
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
             continue
+        if issue.key == "HYBRIS-3662":
+            print(issue.key)
         create_notion_item(issue)
 
 
 def create_eer_task_from_jira():
     issueList = JiraUtil.getEERIncompletedTask()
+    # for issue in issueList:
+    #     if issue.key == "EER-2468":
+    #         print("aa")
+    logging.info(f"waiting for create EER ticket count[{len(issueList)}]")
     for issue in issueList:
-        if issue.key == "EER-2468":
-            print("aa")
-    for issue in issueList:
-        if issue.key == "EER-2468":
+        if issue.key == "EER-2444":
             print("aa")
         if issue.key in excluded_sub_task:
             print(f"{issue.key} is exclude for save block")
             continue
         system_name, assignee = NotionUtil.get_system_code_and_assignee(issue)
         if assignee is None:
-            print(f"skip create [{issue.key}] because its exclude service")
+            logging.info(f"skip create [{issue.key}] because assignee is null")
         else:
             create_notion_item(issue)
 
 
 def updateNotionTicketStatus():
-    itemList = NotionUtil.findOpenedItem(NotionUtil.task_database_id)
+    itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
+    logging.info(f"waiting for update engine notion item count[{len(itemList)}]")
     for item in itemList:
         if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
             urlAr = item["properties"]["Ticket"]["url"].split("/")
@@ -149,6 +158,7 @@ def updateNotionTicketStatus():
             NotionUtil.updateTaskStatus(item, JiraUtil.findIssueByKey(issueKey))
 
     itemList = NotionUtil.findOpenedItem(NotionUtil.subtask_database_id)
+    logging.info(f"waiting for update subtask notion item count[{len(itemList)}]")
     for item in itemList:
         if "EER-816" in str(item["properties"]["Ticket"]):
             aa = 0
@@ -160,12 +170,13 @@ def updateNotionTicketStatus():
 
 def update_eer_and_team1_ticket_status():
     itemList = NotionUtil.findOpenedItem(NotionUtil.ecom_engine_database_id)
+    # for item in itemList:
+    #     if "EER-2449" in str(item["properties"]["Ticket"]):
+    #         aa = 0
+    logging.info(f"engine opened notion item count[{len(itemList)}]")
     for item in itemList:
-        if "MS-7339" in str(item["properties"]["Ticket"]):
+        if "EER-2449" in str(item["properties"]["Ticket"]):
             aa = 0
-    for item in itemList:
-        # if "EER-1441" in str(item["properties"]["Ticket"]):
-        #     aa = 0
         if item["properties"]["Ticket"]["url"] is not None and "/" in item["properties"]["Ticket"]["url"]:
             if "MS-7339" in str(item["properties"]["Ticket"]):
                 aa = 0
@@ -177,6 +188,7 @@ def update_eer_and_team1_ticket_status():
                     f"[update_eer_and_team1_ticket_status] update notion info fail, status_code[{res.status_code}]msg[{res.text}]")
 
     itemList = NotionUtil.findOpenedItem(NotionUtil.subtask_database_id)
+    logging.info(f"subtask opened notion item count[{len(itemList)}]")
     for item in itemList:
         if "EER-1441" in str(item["properties"]["Ticket"]):
             aa = 0
@@ -212,7 +224,7 @@ def printJiraTicket():
 if __name__ == '__main__':
     # printJiraTicket()
     # updateNotionTicketStatus()
-    # print(JiraUtil.findIssueByKey("EER-2196").fields)
+    # print(JiraUtil.findIssueByKey("MS-1929").fields)
     # print(NotionUtil.findOpenedItem(NotionUtil.task_database_id)[0])
     # print(NotionUtil.findByTicketLike("2196")[0])
     # updateNotionTicketStatus()
@@ -224,6 +236,8 @@ if __name__ == '__main__':
     #     NotionUtil.createTodoTask()
     #     time.sleep(10)
 
+    # NotionUtil.findByTicket("12d43989266a8035886be967a4427bc4", "https://hongkongtv.atlassian.net/browse/EER-2463")
+
     logging.basicConfig(filename='./log/autoSyncJiraToNotionapp.log', level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')
     while 1 == 1:
@@ -231,9 +245,17 @@ if __name__ == '__main__':
             now = datetime.now()
             if 6 < now.hour < 20:
                 logging.info("start sync Jira ticket, " + now.strftime("%Y%m%d %H:%M:%S.%f"))
-                create_eer_task_from_jira()
-                create_team1_task_from_jira()
-                update_eer_and_team1_ticket_status()
+                update_eer_and_team1_ticket_status_thread = threading.Thread(target=update_eer_and_team1_ticket_status)
+                create_eer_task_from_jira_thread = threading.Thread(target=create_eer_task_from_jira)
+                create_team1_task_from_jira_thread = threading.Thread(target=create_team1_task_from_jira)
+
+                update_eer_and_team1_ticket_status_thread.start()
+                create_eer_task_from_jira_thread.start()
+                create_team1_task_from_jira_thread.start()
+
+                update_eer_and_team1_ticket_status_thread.join()
+                create_eer_task_from_jira_thread.join()
+                create_team1_task_from_jira_thread.join()
                 logging.info("end sync Jira ticket, " + now.strftime("%Y%m%d %H:%M:%S.%f"))
             else:
                 time.sleep(3600)

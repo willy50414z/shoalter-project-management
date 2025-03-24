@@ -8,23 +8,26 @@ config = configparser.ConfigParser()
 config.read('application.ini')
 aa = config["DEFAULT"]["jira_token"]
 jira = JIRA(options=jiraOptions, basic_auth=(
-	"willy.cheng@shoalter.com", config["DEFAULT"]["jira_token"]))
+    "willy.cheng@shoalter.com", config["DEFAULT"]["jira_token"]))
+
+incomplete_statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
+incomplete_issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', "Enhancement"] # , 'QA Defect'
+
 
 def get_team1_incompleted_task():
     # assemble filter
     assignees = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Ainsley Wang',
-                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh', 'TW - IT - BE - Kenny Ma']
+                 'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh',
+                 'TW - IT - BE - Kenny Ma']
     assignee_query = ', '.join([f'"{assignee}"' for assignee in assignees])
 
     devPICs = ['TW - IT - BE - Willy Cheng', 'TW - IT - BE - Ainsley Wang',
-               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh', 'TW - IT - BE - Kenny Ma']
+               'TW - IT - BE - JOHN CHANG', 'TW - IT - BE - Luke Chen', 'TW - IT - BE - Ethan Hsieh',
+               'TW - IT - BE - Kenny Ma']
     devPIC_query = ', '.join([f'"{devPIC}"' for devPIC in devPICs])
 
-    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
-    status_query = ', '.join([f'"{status}"' for status in statuses])
-
-    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', 'QA Defect']
-    issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
+    status_query = ', '.join([f'"{status}"' for status in incomplete_statuses])
+    issueType_query = ', '.join([f'"{issueType}"' for issueType in incomplete_issueTypes])
 
     jql_query = f'("Development PIC" IN ({devPIC_query}) OR assignee IN ({assignee_query})) AND ((status not in ({status_query}) AND issuetype in ({issueType_query})) OR issuetype in ("Sub-task"))'
 
@@ -45,13 +48,11 @@ def get_team1_incompleted_task():
         startIdx += fetch_size
     return allIssues
 
+
 def getEERIncompletedTask():
+    status_query = ', '.join([f'"{status}"' for status in incomplete_statuses])
 
-    statuses = ['Done', 'Cancelled', 'Pending UAT', 'Launch Ready', 'Closed']
-    status_query = ', '.join([f'"{status}"' for status in statuses])
-
-    issueTypes = ['Task', 'New Feature', 'Bug', 'Improvement', 'QA Defect']
-    issueType_query = ', '.join([f'"{issueType}"' for issueType in issueTypes])
+    issueType_query = ', '.join([f'"{issueType}"' for issueType in incomplete_issueTypes])
 
     jql_query = f'Project="EER" AND (status not in ({status_query}) AND type in ({issueType_query}))'
 
@@ -80,7 +81,11 @@ def get_last_build_ticket(sysTitle):
 
 
 def findIssueByKey(issueKey):
-    return jira.issue(id=issueKey)
+    try:
+        return jira.issue(id=issueKey)
+    except Exception as e:
+        raise ValueError(f"can't find issue, issue[{issueKey}]e[{e}]")
+
     # response = requests.post(url, json=payload, headers=headers)
 
 
@@ -100,6 +105,7 @@ def create_build_ticket(summary, description, buildDate):
     }
     return jira.create_issue(fields)
 
+
 def update_build_ticket(issue_key, summary, description, buildDate):
     fields = {
         "project": {
@@ -116,6 +122,7 @@ def update_build_ticket(issue_key, summary, description, buildDate):
     }
     issue = jira.issue(issue_key)
     return issue.update(fields=fields)
+
 
 def test():
     jira.version(id="24062")
@@ -142,7 +149,7 @@ def test():
 # get issue by assignee
 
 
-##https://hongkongtv.atlassian.net/rest/api/latest/issue/EER-86
+##https://hongkongtv.atlassian.net/rest/api/latest/issue/EER-2444
 # for issue in issues:
 #    issue_key = issue.key
 #    issue_assignee = issue.fields.assignee
