@@ -89,19 +89,20 @@ class SyncHybrisDiffToRevampService():
                 # change to parent sha
                 self.git_svc.reset(commit_diff["parent_sha"])
                 print(f"start analyze changed file, sha[{commit_diff["parent_sha"]}]file_path[{file_path}]")
-                if os.path.exists(file_path) and self.is_file_contains_annotation(file_path):
-                    java_file_info = java_parse_svc.get_java_file_info(file_path)
-                    if java_file_info:
-                        for line_num in value:
-                            # find method info
-                            method = java_parse_svc.find_method_by_line_number(java_file_info, line_num)
-                            if method:
-                                revamp_related_info = self.get_revamp_related_info(method)
-                                if len(revamp_related_info) > 0:
-                                    change_list.append({key + ":" + line_num: revamp_related_info})
-                    else:
-                        # change_list.append({key + ":9999": {"remark": "cant analyze", "related_method": ["##"]}})
-                        raise ValueError(f"can't analyze file[{file_path}]")
+                if os.path.exists(file_path):
+                    if self.is_file_contains_annotation(file_path):
+                        java_file_info = java_parse_svc.get_java_file_info(file_path)
+                        if java_file_info:
+                            for line_num in value:
+                                # find method info
+                                method = java_parse_svc.find_method_by_line_number(java_file_info, line_num)
+                                if method:
+                                    revamp_related_info = self.get_revamp_related_info(method)
+                                    if len(revamp_related_info) > 0:
+                                        change_list.append({key + ":" + line_num: revamp_related_info})
+                        else:
+                            # change_list.append({key + ":9999": {"remark": "cant analyze", "related_method": ["##"]}})
+                            raise ValueError(f"can't analyze file[{file_path}]")
                 else:
                     change_list.append(
                         {key + ":000": {"remark": "new file", "related_method": ["new file#new file#new file"]}})
@@ -170,7 +171,7 @@ class SyncHybrisDiffToRevampService():
             related_file_list.append(related_file)
         return related_file_list
 
-    def build_change_summary_response(self, branch_name, branch_diffs):
+    def build_change_summary_response(self, branch_name, end_commit_sha, branch_diffs):
         print(f"hybris branch[{branch_name}]commits size[{len(branch_diffs)}]diff lines[{str(branch_diffs)}]")
 
         revamp_related_change_summary = self.build_revamp_related_change_summary(branch_diffs)
@@ -179,8 +180,10 @@ class SyncHybrisDiffToRevampService():
         related_service_list = self.build_related_service_set(branch_change_summary)
         related_commit_list = self.build_related_commit_list(branch_change_summary)
         related_file_list = self.build_related_file_list(branch_change_summary)
-
-        return json.dumps({"branch": branch_name, "commits_change_summary": revamp_related_change_summary,
+        if not end_commit_sha:
+            end_commit_sha = ""
+        return json.dumps({"branch": branch_name, "end_commit_sha": end_commit_sha,
+                           "commits_change_summary": revamp_related_change_summary,
                            "branch_change_summary": branch_change_summary,
                            "related_service": related_service_list, "related_commit": related_commit_list,
                            "related_file": related_file_list},
@@ -188,7 +191,7 @@ class SyncHybrisDiffToRevampService():
 
     def get_branch_change_summary(self, branch_name, end_commit_sha):
         branch_diff = self.get_branch_diff(branch_name, end_commit_sha)
-        return self.build_change_summary_response(branch_name, branch_diff)
+        return self.build_change_summary_response(branch_name, end_commit_sha, branch_diff)
 
     def get_release_change_summary(self, target_release_branch_name):
         branch_diff = self.get_release_branch_diff(target_release_branch_name)
