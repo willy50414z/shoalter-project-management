@@ -161,14 +161,14 @@ class SyncHybrisDiffToRevampService():
         return related_service_list
 
     def build_related_file_list(self, branch_change_summary):
-        related_service_set = {""}
+        related_file_set = {""}
         for file_path in branch_change_summary.keys():
-            related_service_set.add(file_path[0:file_path.rfind(":")])
+            related_file_set.add(file_path)
 
-        related_service_list = []
-        for related_service in related_service_set:
-            related_service_list.append(related_service)
-        return related_service_list
+        related_file_list = []
+        for related_file in related_file_set:
+            related_file_list.append(related_file)
+        return related_file_list
 
     def build_change_summary_response(self, branch_name, branch_diffs):
         print(f"hybris branch[{branch_name}]commits size[{len(branch_diffs)}]diff lines[{str(branch_diffs)}]")
