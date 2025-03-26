@@ -452,7 +452,6 @@ def updateTaskStatus(page, issue):
             fix_versions += fix_version.name + ","
             if "@" in fix_version.name:
                 release_date = fix_version.name.split("@")[1]
-                break
         if len(fix_versions) > 0:
             fix_versions = fix_versions[0:len(fix_versions) - 1]
         system_name, assignee = get_system_code_and_assignee(issue)
