@@ -51,8 +51,8 @@ class BuildTicketService:
     
     {color:#ff5630}*ArgoCD MR:* {color}[${mr_url}|${mr_url}]
     
-    Revision: ${release_branch}
-    Tag: ${release_sha}
+    Revision: ${release_sha}
+    Tag: ${release_branch}
     
     System update: *N*
     
@@ -589,8 +589,6 @@ class BuildTicketService:
         # 等gitlab create好pipeline
         # time.sleep(30)
         self.check_pipeline_process(notion_info)
-        self.stage_id += 1
-
         self.load_release_mr_url(notion_info)
         self.stage_id += 1
 
@@ -604,10 +602,10 @@ class BuildTicketService:
 
 
 if __name__ == '__main__':
-    releaseDate = "2025-03-10"
+    releaseDate = "2025-03-31"
     bt_svc = BuildTicketService()
-    # bt_svc.create_raw_ticket(releaseDate)
-    bt_svc.update_build_ticket_info(releaseDate)
+    bt_svc.create_raw_ticket(releaseDate)
+    # bt_svc.update_build_ticket_info(releaseDate)
     # notion_info = {}
     # # notion_info["IIMS-LM"] = {"stage_id":0}
     # notion_info["IIDS"] = {"stage_id":0}
