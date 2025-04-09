@@ -88,8 +88,8 @@ def findByReleaseDateIsAndBuildTicketIsEmpty(releaseDate):
                 data) + "]")
 
 
-def findByTicketLike(issueKey):
-    url = f'https://api.notion.com/v1/databases/{ecom_engine_database_id}/query'
+def findByTicketLike(issueKey, datatase=ecom_engine_database_id):
+    url = f'https://api.notion.com/v1/databases/{datatase}/query'
     payload = {"page_size": 100, "filter": {
         "property": "Ticket",
         "rich_text": {
@@ -371,6 +371,9 @@ def createSubTask(issue, task_id=None):
                                f"{jira_url_prefix}{issue.fields.parent.key if issue.fields.issuetype.subtask else issue.key}")
     if len(parent_task) == 0:
         return
+
+    delete_task_in_subtask_db(issue)
+
     payload = {
         "parent": {"type": "database_id", "database_id": subtask_database_id},
         "properties": {
@@ -407,6 +410,15 @@ def createSubTask(issue, task_id=None):
     }
 
     return requests.post('https://api.notion.com/v1/pages', json=payload, headers=headers)
+
+
+def delete_task_in_subtask_db(subtask_issue):
+    if subtask_issue.fields.issuetype.subtask:
+        task = findByTicketLike(subtask_issue.fields.parent.key, subtask_database_id)
+        if len(task) > 0:
+            print(
+                f"subtask has created, parent ticket will be deleted, parent key[{task[0]["properties"]["Ticket"]["url"]}]")
+            return requests.delete("https://api.notion.com/v1/blocks/" + task[0]["id"], headers=headers)
 
 
 def createTodoTask():
@@ -503,6 +515,12 @@ def updateTaskStatus(page, issue):
                 }
             }
 
+        if hasattr(issue.fields, "parent") and issue.fields.parent and len(issue.fields.parent.key) > 0:
+            payload["properties"]["Epic"] = {
+                'type': 'url',
+                'url': jira_url_prefix + issue.fields.parent.key
+            }
+
         return requests.patch(url, json=payload, headers=headers)
 
 
@@ -569,7 +587,7 @@ def updateSubTaskStatus(page, issue):
     # page["properties"]["fixVersion"]["rich_text"][0]["plain_text"]
     try:
         if page["properties"]["JiraStatus"]["select"] is not None and page["properties"]["JiraStatus"]["select"][
-            "name"] == issue.fields.status.name:
+            "name"] == issue.fields.status.name and not issue.fields.duedate and page["properties"]["DevDate"]['date'] and page["properties"]["DevDate"]['date']['start'] == issue.fields.duedate:
             return ""
         else:
             url = f'https://api.notion.com/v1/pages/{page["id"]}'
@@ -591,6 +609,8 @@ def updateSubTaskStatus(page, issue):
                     }
                 }
             }
+            if issue.fields.duedate:
+                payload["properties"]["DevDate"] = {"date": {"start": f"{issue.fields.duedate}"}}
             if issue.fields.status.name == "已取消":
                 payload["properties"]["Status"] = {"status": {"name": "Done"}}
             response = requests.patch(url, json=payload, headers=headers)
