@@ -445,7 +445,7 @@ def get_assignee_by_issue(issue):
     if issue.fields.assignee is not None and issue.fields.assignee.displayName in peopleIdMap:
         return peopleIdMap[issue.fields.assignee.displayName]
     else:
-        pic_name = issue.fields.customfield_11563.displayName if issue.fields.customfield_11563 is not None and issue.fields.customfield_11563.displayName in peopleIdMap else 'TW - IT - BE - Tony Ng'
+        pic_name = issue.fields.customfield_11563.displayName if hasattr(issue.fields, "customfield_11563") and issue.fields.customfield_11563 is not None and issue.fields.customfield_11563.displayName in peopleIdMap else 'TW - IT - BE - Tony Ng'
         return peopleIdMap[pic_name]
 
 
@@ -526,7 +526,7 @@ def updateTaskStatus(page, issue):
 
 def get_check_task_error_msg(issue):
     msg = ""
-    if not issue.fields.customfield_11568:
+    if hasattr(issue.fields, "customfield_11563") and not issue.fields.customfield_11568:
         msg += "[Notes for Testing] missing\r\n"
     if not issue.fields.duedate:
         msg += "[DueDate] missing\r\n"
